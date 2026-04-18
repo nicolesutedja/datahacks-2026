@@ -59,11 +59,11 @@ export default function App() {
   // High risk alert when wave reaches 50% radius
   const showLiquefactionAlert = waveProgress > 0.5 && gameState === GAME_STATES.PROPAGATING;
 
-  // 1. Render Landing Page if in MENU mode
+// 1. Render Landing Page if in MENU mode
   if (appMode === 'MENU') {
     return (
       <LandingPage 
-        onSelectScenario={handleStartScenario} 
+        onStartScenario={handleStartScenario} // FIX: Changed from onSelectScenario
         onSandboxMode={handleStartSandbox} 
       />
     );
@@ -98,7 +98,7 @@ export default function App() {
         onMagnitudeChange={setMagnitude}
         onPanicModeToggle={() => {}}
         onStart={startSimulation}
-        onReset={handleReturnToMenu} // Returns to main menu instead of just resetting map
+        onReset={handleReturnToMenu}
       />
 
       <ResourceDock
@@ -108,9 +108,9 @@ export default function App() {
         onSelectUnit={setSelectedUnitType}
       />
 
-      {/* Tasks Panel - Wrapped in a positioning div to push it below the TopBar */}
-      <div className="absolute top-20 left-0 z-20 pointer-events-none w-full h-full">
-        <div className="pointer-events-auto relative w-full h-full">
+      {/* Tasks Panel - FIX: Removed w-full h-full from the inner div so it doesn't block clicks! */}
+      <div className="absolute top-20 left-0 z-20 pointer-events-none">
+        <div className="pointer-events-auto relative">
           <TasksPanel
             gameState={gameState}
             magnitude={magnitude}
