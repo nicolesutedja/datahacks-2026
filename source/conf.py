@@ -7,9 +7,9 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = 'Seismic Simulations'
-copyright = '2026, Nehal Choudhary, Jiya Sreejesh, Janet Garcia Martinez,'
-author = 'Nehal Choudhary, Jiya Sreejesh, Janet Garcia Martinez,'
-release = 'Nicole Sutedja'
+copyright = '2026, Nehal Choudhary, Jiya Sreejesh, Janet Garcia Martinez, Nicole Sutedja'
+author = 'Nehal Choudhary, Jiya Sreejesh, Janet Garcia Martinez, Nicole Sutedja'
+release = '2026'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
