@@ -25,29 +25,20 @@ export const TasksPanel = ({ gameState, magnitude, unitsDeployed, epicenterSet }
     if (gameState === 'SETUP') {
       tasks.push({
         id: '1',
-        title: 'Set epicenter location on map',
+        title: 'Lock epicenter on grid',
         status: epicenterSet ? 'completed' : 'in-progress',
         priority: 'high'
       });
-
       tasks.push({
         id: '2',
-        title: 'Adjust earthquake magnitude',
+        title: 'Calibrate seismic magnitude',
         status: magnitude !== 6.5 ? 'completed' : 'pending',
         priority: 'medium'
       });
-
       tasks.push({
         id: '3',
         title: `Deploy response units (${unitsDeployed}/5)`,
         status: unitsDeployed > 0 ? 'in-progress' : 'pending',
-        priority: 'high'
-      });
-
-      tasks.push({
-        id: '4',
-        title: 'Start simulation',
-        status: 'pending',
         priority: 'high'
       });
     }
@@ -55,46 +46,9 @@ export const TasksPanel = ({ gameState, magnitude, unitsDeployed, epicenterSet }
     if (gameState === 'PROPAGATING') {
       tasks.push({
         id: '1',
-        title: 'Monitor wave propagation',
+        title: 'Monitor wave velocity',
         status: 'in-progress',
         priority: 'high'
-      });
-
-      tasks.push({
-        id: '2',
-        title: 'Deploy additional resources if needed',
-        status: unitsDeployed >= 5 ? 'completed' : 'in-progress',
-        priority: 'medium'
-      });
-
-      tasks.push({
-        id: '3',
-        title: 'Wait for simulation completion',
-        status: 'in-progress',
-        priority: 'low'
-      });
-    }
-
-    if (gameState === 'RESULTS') {
-      tasks.push({
-        id: '1',
-        title: 'Review performance metrics',
-        status: 'in-progress',
-        priority: 'high'
-      });
-
-      tasks.push({
-        id: '2',
-        title: 'Analyze AI recommendations',
-        status: 'pending',
-        priority: 'medium'
-      });
-
-      tasks.push({
-        id: '3',
-        title: 'Plan next simulation',
-        status: 'pending',
-        priority: 'low'
       });
     }
 
@@ -109,98 +63,74 @@ export const TasksPanel = ({ gameState, magnitude, unitsDeployed, epicenterSet }
       case 'completed':
         return <CheckCircle2 className="w-4 h-4 text-green-500" />;
       case 'in-progress':
-        return <AlertCircle className="w-4 h-4 text-blue-500 animate-pulse" />;
+        return <AlertCircle className="w-4 h-4 text-red-500 animate-pulse" />;
       default:
-        return <Circle className="w-4 h-4 text-slate-400" />;
-    }
-  };
-
-  const getPriorityColor = (priority: Task['priority']) => {
-    switch (priority) {
-      case 'high':
-        return 'bg-red-100 text-red-700 border-red-200';
-      case 'medium':
-        return 'bg-yellow-100 text-yellow-700 border-yellow-200';
-      default:
-        return 'bg-slate-100 text-slate-700 border-slate-200';
+        return <Circle className="w-4 h-4 text-red-900" />;
     }
   };
 
   return (
-    <div className="absolute top-4 left-4 z-20">
+    <div className="absolute top-4 left-4 z-20 font-mono">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-3 bg-white rounded-lg shadow-lg px-4 py-3 border border-slate-200 hover:shadow-xl transition-all"
+        className="flex items-center gap-3 bg-black/80 hover:bg-red-950/40 backdrop-blur-md border border-red-900/50 px-4 py-2 shadow-[0_0_15px_rgba(220,38,38,0.1)] transition-all"
       >
         <div className="flex items-center gap-2">
-          <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
-          <span className="font-medium text-slate-900">
+          <div className="w-2 h-2 bg-red-600 rounded-full animate-pulse shadow-[0_0_8px_rgba(220,38,38,1)]" />
+          <span className="text-xs font-bold tracking-widest text-red-500 uppercase">
             Tasks {completedCount}/{tasks.length}
           </span>
         </div>
-        <motion.div
-          animate={{ rotate: isOpen ? 180 : 0 }}
-          transition={{ duration: 0.2 }}
-        >
-          <ChevronDown className="w-4 h-4 text-slate-600" />
+        <motion.div animate={{ rotate: isOpen ? 180 : 0 }}>
+          <ChevronDown className="w-4 h-4 text-red-500/70" />
         </motion.div>
       </button>
 
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ opacity: 0, y: -10, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -10, scale: 0.95 }}
-            transition={{ duration: 0.2 }}
-            className="mt-2 w-80 bg-white rounded-lg shadow-xl border border-slate-200 overflow-hidden"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="mt-2 w-80 bg-black/90 backdrop-blur-lg border border-red-900/50 shadow-[0_10px_30px_rgba(0,0,0,0.5)] overflow-hidden"
           >
-            <div className="p-4 border-b border-slate-200 bg-slate-50">
-              <h3 className="font-semibold text-slate-900">Current Tasks</h3>
-              <p className="text-xs text-slate-600 mt-1">
-                {completedCount === tasks.length
-                  ? 'All tasks completed'
-                  : `${tasks.length - completedCount} tasks remaining`}
-              </p>
+            {/* Header */}
+            <div className="p-4 border-b border-red-900/30 bg-red-950/20">
+              <h3 className="text-xs font-bold tracking-[0.2em] text-red-500 uppercase">Mission Objectives</h3>
             </div>
 
+            {/* Task List */}
             <div className="p-2 max-h-96 overflow-y-auto">
-              {tasks.map((task, index) => (
-                <motion.div
-                  key={task.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                  className="p-3 rounded-lg hover:bg-slate-50 transition-colors mb-1"
-                >
+              {tasks.map((task) => (
+                <div key={task.id} className="p-3 mb-1 border border-transparent hover:border-red-900/30 hover:bg-red-950/10 transition-all">
                   <div className="flex items-start gap-3">
                     <div className="mt-0.5">{getStatusIcon(task.status)}</div>
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-sm ${task.status === 'completed' ? 'line-through text-slate-500' : 'text-slate-900'}`}>
-                        {task.title}
+                    <div className="flex-1">
+                      <p className={`text-xs tracking-wide ${task.status === 'completed' ? 'line-through text-red-900' : 'text-red-100'}`}>
+                        {task.title.toUpperCase()}
                       </p>
-                      <div className="mt-1">
-                        <span className={`text-xs px-2 py-0.5 rounded-full border ${getPriorityColor(task.priority)}`}>
-                          {task.priority}
-                        </span>
-                      </div>
+                      <span className={`text-[9px] px-1.5 py-0.5 mt-2 inline-block border ${
+                        task.priority === 'high' ? 'border-red-600 text-red-500 bg-red-950/40' : 'border-red-900 text-red-700'
+                      }`}>
+                        {task.priority.toUpperCase()}
+                      </span>
                     </div>
                   </div>
-                </motion.div>
+                </div>
               ))}
             </div>
 
-            <div className="p-3 border-t border-slate-200 bg-slate-50">
-              <div className="flex items-center justify-between text-xs text-slate-600">
-                <span>Progress</span>
+            {/* Footer Progress */}
+            <div className="p-3 border-t border-red-900/30 bg-black/40">
+              <div className="flex items-center justify-between text-[10px] text-red-500/50 mb-2 tracking-widest">
+                <span>SYNC PROGRESS</span>
                 <span>{Math.round((completedCount / tasks.length) * 100)}%</span>
               </div>
-              <div className="mt-2 w-full bg-slate-200 rounded-full h-1.5">
+              <div className="w-full bg-red-950/30 h-1">
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${(completedCount / tasks.length) * 100}%` }}
-                  className="bg-blue-500 h-1.5 rounded-full"
-                  transition={{ duration: 0.5 }}
+                  className="bg-red-600 h-full shadow-[0_0_8px_rgba(220,38,38,0.8)]"
                 />
               </div>
             </div>
