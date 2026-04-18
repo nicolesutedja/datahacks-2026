@@ -24,11 +24,7 @@ Create a `.env` file in the root directory. This is critical for the 3D map rend
 
 ```bash
 # --- Mapping Infrastructure ---
-# Get at cloud.maptiler.com (Free Tier)
-VITE_MAPTILER_API_KEY=your_maptiler_key_here
-
-# Get at console.cloud.google.com (Enabled Maps JS API)
-VITE_GOOGLE_MAPS_API_KEY=your_google_maps_key_here
+VITE_MAPBOX_TOKEN=your_mapbox_token_here
 
 # --- AI & Immersive Intelligence ---
 # Get at aistudio.google.com
