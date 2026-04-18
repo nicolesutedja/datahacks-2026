@@ -25,7 +25,7 @@ Create a `.env` file in the root directory. This is critical for the 3D map rend
 ```bash
 # --- Mapping Infrastructure ---
 # Get at cloud.maptiler.com (Free Tier)
-VITE_MAPTILER_KEY=your_maptiler_key_here
+VITE_MAPTILER_API_KEY=your_maptiler_key_here
 
 # Get at console.cloud.google.com (Enabled Maps JS API)
 VITE_GOOGLE_MAPS_API_KEY=your_google_maps_key_here
@@ -98,7 +98,7 @@ src/
 ---
 
 ## 🚀 Troubleshooting
-* **Map Not Loading:** Ensure `VITE_MAPTILER_KEY` is present in your `.env` and restart the dev server.
+* **Map Not Loading:** Ensure `VITE_MAPTILE_API_KEY` is present in your `.env` and restart the dev server.
 * **Google Maps Error:** Confirm that the **Maps JavaScript API** is enabled in your Google Cloud Console for the project associated with your key.
 * **3D Building Missing:** Zoom in past level 15; extrusion layers are set to activate for high-detail urban views.
 
