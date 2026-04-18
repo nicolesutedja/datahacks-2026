@@ -102,9 +102,8 @@ export const MapboxContainer = ({
       });
     });
 
-    map.current.addControl(new mapboxgl.NavigationControl({ visualizePitch: true }), 'top-right');
-    map.current.addControl(new mapboxgl.FullscreenControl(), 'top-right');
-
+    map.current.addControl(new mapboxgl.NavigationControl({ visualizePitch: true }), 'left');
+    map.current.addControl(new mapboxgl.FullscreenControl(), 'left');
     map.current.on('click', (e) => {
       onMapClickRef.current(e.lngLat.lat, e.lngLat.lng);
     });
