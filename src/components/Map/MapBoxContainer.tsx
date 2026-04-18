@@ -2,6 +2,11 @@ import { useEffect, useRef } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
+// 1. Import the visual hook we created earlier! 
+// (Adjust the path if your hooks folder is somewhere else)
+import { useSeismicVisuals } from '../../hooks/useSeismicVisuals';
+import React from 'react';
+
 interface Position {
   lat: number;
   lng: number;
@@ -21,6 +26,12 @@ interface MapboxContainerProps {
   gameState: string;
   onMapClick: (lat: number, lng: number) => void;
   selectedUnitType: Unit['type'] | null;
+  
+  // 2. ADDED: We now pass the ML output down to the map
+  simulationOutput: {
+    waveform: number[][];
+    max_amplitude: number;
+  } | null;
 }
 
 const LA_JOLLA_CENTER: [number, number] = [-117.2713, 32.8328];
@@ -31,20 +42,28 @@ export const MapboxContainer = ({
   waveProgress,
   gameState,
   onMapClick,
-  selectedUnitType
+  selectedUnitType,
+  simulationOutput // Destructured here
 }: MapboxContainerProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const epicenterMarker = useRef<mapboxgl.Marker | null>(null);
   const unitMarkers = useRef<Map<number, mapboxgl.Marker>>(new Map());
 
-  // Store the latest click handler to prevent map re-renders
+  // 3. ADDED: Trigger the DOM screen shake when propagating!
+  useSeismicVisuals(
+    simulationOutput
+      ? { waveform: simulationOutput.waveform, maxAmplitude: simulationOutput.max_amplitude }
+      : null,
+    gameState === 'PROPAGATING' // Shake the screen while the wave is moving
+  );
+
   const onMapClickRef = useRef(onMapClick);
   useEffect(() => {
     onMapClickRef.current = onMapClick;
   }, [onMapClick]);
 
-  // 1. Initialize Mapbox (Runs ONCE)
+  // Initialize Mapbox (Runs ONCE)
   useEffect(() => {
     if (!mapContainer.current || map.current) return;
 
@@ -52,7 +71,7 @@ export const MapboxContainer = ({
 
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/dark-v11', // Perfect for the tactical theme
+      style: 'mapbox://styles/mapbox/dark-v11', 
       center: LA_JOLLA_CENTER,
       zoom: 12,
       pitch: 60,
@@ -63,8 +82,6 @@ export const MapboxContainer = ({
     map.current.on('load', () => {
       if (!map.current) return;
 
-      
-      // Add Mapbox 3D Terrain
       map.current.addSource('mapbox-dem', {
         type: 'raster-dem',
         url: 'mapbox://mapbox.mapbox-terrain-dem-v1',
@@ -73,8 +90,6 @@ export const MapboxContainer = ({
       });
       map.current.setTerrain({ source: 'mapbox-dem', exaggeration: 1.5 });
 
-      // Add 3D Buildings
-      // Note: Mapbox's dark theme usually hides building extrusions by default, we force them on.
       map.current.addLayer({
         id: '3d-buildings',
         source: 'composite',
@@ -90,7 +105,6 @@ export const MapboxContainer = ({
         }
       });
 
-      // Add Atmosphere/Sky
       map.current.addLayer({
         id: 'sky',
         type: 'sky',
@@ -115,7 +129,7 @@ export const MapboxContainer = ({
     };
   }, []);
 
-  // 2. Update Epicenter Marker
+  // Update Epicenter Marker
   useEffect(() => {
     if (!map.current) return;
 
@@ -142,8 +156,9 @@ export const MapboxContainer = ({
     }
   }, [epicenter]);
 
-  // 3. Update Unit Markers
+  // Update Unit Markers
   useEffect(() => {
+    // ... [Your existing unit markers code remains exactly the same] ...
     if (!map.current) return;
 
     const currentIds = new Set(units.map(u => u.id));
@@ -198,18 +213,37 @@ export const MapboxContainer = ({
     });
   }, [units]);
 
-  // 4. Update Wave Overlay (Polygon generation)
+  // 4. UPDATED: Optimized Wave Overlay 
   useEffect(() => {
-    if (!map.current || !epicenter || gameState !== 'PROPAGATING') return;
+    // Hide layer when not propagating
+    if (gameState !== 'PROPAGATING') {
+        if (map.current?.getLayer('wave-layer')) {
+            map.current.setLayoutProperty('wave-layer', 'visibility', 'none');
+            map.current.setLayoutProperty('wave-layer-outline', 'visibility', 'none');
+        }
+        return;
+    }
+
+    if (!map.current || !epicenter) return;
 
     const sourceId = 'wave-circle';
     const layerId = 'wave-layer';
 
-    if (map.current.getLayer(layerId)) map.current.removeLayer(layerId);
-    if (map.current.getLayer(`${layerId}-outline`)) map.current.removeLayer(`${layerId}-outline`);
-    if (map.current.getSource(sourceId)) map.current.removeSource(sourceId);
+    // Calculate dynamic color based on ML Max Amplitude
+    let fillColor = '#f59e0b'; // Default: Moderate (Yellow/Orange)
+    let outlineColor = '#fbbf24';
+    
+    if (simulationOutput?.max_amplitude) {
+      if (simulationOutput.max_amplitude > 0.02) {
+        fillColor = '#dc2626'; // Severe (Red)
+        outlineColor = '#ef4444';
+      } else if (simulationOutput.max_amplitude > 0.01) {
+        fillColor = '#ea580c'; // High (Dark Orange)
+        outlineColor = '#f97316';
+      }
+    }
 
-    const radiusKm = waveProgress * 100;
+    const radiusKm = waveProgress * 100; // Adjust max radius scale as needed
     const radiusMeters = radiusKm * 1000;
 
     const createGeoJSONCircle = (center: [number, number], radiusInMeters: number) => {
@@ -235,32 +269,49 @@ export const MapboxContainer = ({
       };
     };
 
-    map.current.addSource(sourceId, {
-      type: 'geojson',
-      data: createGeoJSONCircle([epicenter.lng, epicenter.lat], radiusMeters)
-    });
+    const newGeoJson = createGeoJSONCircle([epicenter.lng, epicenter.lat], radiusMeters);
+    const source = map.current.getSource(sourceId) as mapboxgl.GeoJSONSource;
 
-    map.current.addLayer({
-      id: layerId,
-      type: 'fill',
-      source: sourceId,
-      paint: {
-        'fill-color': '#dc2626',
-        'fill-opacity': 0.2
-      }
-    });
+    // OPTIMIZATION: Instead of removing/re-adding layers, just update the data!
+    if (source) {
+      source.setData(newGeoJson);
+      
+      // Ensure it's visible
+      map.current.setLayoutProperty(layerId, 'visibility', 'visible');
+      map.current.setLayoutProperty(`${layerId}-outline`, 'visibility', 'visible');
+      
+      // Update color dynamically based on magnitude
+      map.current.setPaintProperty(layerId, 'fill-color', fillColor);
+      map.current.setPaintProperty(`${layerId}-outline`, 'line-color', outlineColor);
+    } else {
+      // First time initialization
+      map.current.addSource(sourceId, {
+        type: 'geojson',
+        data: newGeoJson
+      });
 
-    map.current.addLayer({
-      id: `${layerId}-outline`,
-      type: 'line',
-      source: sourceId,
-      paint: {
-        'line-color': '#ef4444',
-        'line-width': 4,
-        'line-opacity': 0.8
-      }
-    });
-  }, [epicenter, waveProgress, gameState]);
+      map.current.addLayer({
+        id: layerId,
+        type: 'fill',
+        source: sourceId,
+        paint: {
+          'fill-color': fillColor,
+          'fill-opacity': 0.2
+        }
+      });
+
+      map.current.addLayer({
+        id: `${layerId}-outline`,
+        type: 'line',
+        source: sourceId,
+        paint: {
+          'line-color': outlineColor,
+          'line-width': 4,
+          'line-opacity': 0.8
+        }
+      });
+    }
+  }, [epicenter, waveProgress, gameState, simulationOutput]);
 
   return (
     <div className="relative w-full h-full">

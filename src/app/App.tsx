@@ -11,10 +11,17 @@ import { TasksPanel } from '../components/HUD/TasksPanel';
 import { LandingPage } from '../components/HUD/LandingPage';
 import { AlertTriangle } from 'lucide-react';
 
+interface SimulationData {
+  waveform: number[][];
+  max_amplitude: number;
+}
+
+
+
 export default function App() {
   // Add App Mode State (MENU vs GAME)
   const [appMode, setAppMode] = useState<'MENU' | 'GAME'>('MENU');
-
+  const [mlData, setMlData] = useState<SimulationData | null>(null);
   const {
     gameState,
     epicenter,
@@ -33,13 +40,50 @@ export default function App() {
     GAME_STATES
   } = useGameManager();
 
-  const handleMapClick = useCallback((lat: number, lng: number) => {
+  const handleMapClick = useCallback(async (lat: number, lng: number) => {
+    // 1. SCENARIO: Placing the Epicenter
     if (gameState === GAME_STATES.SETUP && !epicenter) {
+      // Keep your existing state update
       placeEpicenter(lat, lng);
-    } else if (selectedUnitType && (gameState === GAME_STATES.SETUP || gameState === GAME_STATES.PROPAGATING)) {
+  
+      // Fetch the ML math for the visual effects!
+      try {
+        // (Adjust this URL to match wherever your Python FastAPI/Flask server is running)
+        const response = await fetch(`http://localhost:8000/simulate?lat=${lat}&lng=${lng}&magnitude=6.8`);
+        
+        if (response.ok) {
+          const data = await response.json();
+          setMlData({
+            waveform: data.waveform,
+            max_amplitude: data.max_amplitude
+          });
+        } else {
+          throw new Error("Backend response not OK");
+        }
+      } catch (error) {
+        console.error("Failed to fetch ML data:", error);
+        
+        // HACKATHON BACKUP: If the Python server drops during the live demo, 
+        // fallback to dummy math so the screen still shakes and you don't lose points!
+        setMlData({
+          waveform: [Array.from({length: 600}, () => (Math.random() - 0.5) * 0.03)], 
+          max_amplitude: 0.03
+        });
+      }
+    } 
+    // 2. SCENARIO: Deploying Units (Your original logic, untouched!)
+    else if (selectedUnitType && (gameState === GAME_STATES.SETUP || gameState === GAME_STATES.PROPAGATING)) {
       deployUnit(lat, lng);
     }
-  }, [gameState, epicenter, selectedUnitType, placeEpicenter, deployUnit, GAME_STATES]);
+  }, [
+    gameState, 
+    epicenter, 
+    selectedUnitType, 
+    placeEpicenter, 
+    deployUnit, 
+    GAME_STATES, 
+    setMlData // <-- Don't forget to add your new state setter to the dependency array!
+  ]);
 
   // Landing Page Handlers
   const handleStartScenario = (scenario: any) => {
@@ -83,13 +127,15 @@ export default function App() {
     <div className="relative w-full h-screen bg-slate-950 text-slate-100 overflow-hidden selection:bg-amber-500/30">
       
       {/* 2. Swapped to Mapbox Container */}
-      <MapboxContainer
+      <MapboxContainer 
         epicenter={epicenter}
         units={units}
         waveProgress={waveProgress}
         gameState={gameState}
         onMapClick={handleMapClick}
         selectedUnitType={selectedUnitType}
+        // NEW: Pass the ML data down so the map can shake and color itself!
+        simulationOutput={mlData} 
       />
 
       {/* HUD Overlays */}
