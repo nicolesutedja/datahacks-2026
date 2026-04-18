@@ -12,8 +12,8 @@ Clone the repository and install the dependencies.
 
 ```bash
 # Clone the repository
-git clone [https://github.com/your-repo/seismic-sentinel.git](https://github.com/your-repo/seismic-sentinel.git)
-cd seismic-sentinel
+git clone https://github.com/nicolesutedja/datahacks-2026.git
+cd datahacks-2026
 
 # Install dependencies
 npm install
