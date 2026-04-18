@@ -6,6 +6,7 @@ import { Sidebar } from './Sidebar';
 import { ResourceDock } from './ResourceDock';
 import { TasksPanel } from './TasksPanel';
 import { ResultsScreen } from '../Modals/ResultsScreen';
+import { MapboxContainer } from '../Map/MapboxContainer';
 
 export const GameMode = ({
   gameState, epicenter, magnitude, units, selectedUnitType, waveProgress, countdown, results,
