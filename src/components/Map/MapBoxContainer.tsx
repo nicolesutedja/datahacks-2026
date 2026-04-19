@@ -1,9 +1,8 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useMemo } from 'react'; // INJECTED 3: Added useMemo
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
 // 1. Import the visual hook we created earlier! 
-// (Adjust the path if your hooks folder is somewhere else)
 import { useSeismicVisuals } from '../../hooks/useSeismicVisuals';
 import React from 'react';
 
@@ -157,7 +156,6 @@ export const MapboxContainer = ({
 
   // Update Unit Markers
   useEffect(() => {
-    // ... [Your existing unit markers code remains exactly the same] ...
     if (!map.current) return;
 
     const currentIds = new Set(units.map(u => u.id));
@@ -228,21 +226,23 @@ export const MapboxContainer = ({
     const sourceId = 'wave-circle';
     const layerId = 'wave-layer';
 
-    // Calculate dynamic color based on ML Max Amplitude
-    let fillColor = '#f59e0b'; // Default: Moderate (Yellow/Orange)
+    let fillColor = '#f59e0b';
     let outlineColor = '#fbbf24';
     
     if (simulationOutput?.max_amplitude) {
       if (simulationOutput.max_amplitude > 0.02) {
-        fillColor = '#dc2626'; // Severe (Red)
+        fillColor = '#dc2626'; // Severe
         outlineColor = '#ef4444';
       } else if (simulationOutput.max_amplitude > 0.01) {
-        fillColor = '#ea580c'; // High (Dark Orange)
+        fillColor = '#ea580c'; // High
         outlineColor = '#f97316';
       }
     }
 
-    const radiusKm = waveProgress * 100; // Adjust max radius scale as needed
+    // INJECTED 2: Dynamic Radius calculation based on amplitude!
+    const predictedAmplitude = simulationOutput?.max_amplitude || 0.03;
+    const maxRadiusKm = predictedAmplitude * 3000; 
+    const radiusKm = waveProgress * maxRadiusKm;
     const radiusMeters = radiusKm * 1000;
 
     const createGeoJSONCircle = (center: [number, number], radiusInMeters: number) => {
@@ -271,19 +271,13 @@ export const MapboxContainer = ({
     const newGeoJson = createGeoJSONCircle([epicenter.lng, epicenter.lat], radiusMeters);
     const source = map.current.getSource(sourceId) as mapboxgl.GeoJSONSource;
 
-    // OPTIMIZATION: Instead of removing/re-adding layers, just update the data!
     if (source) {
       source.setData(newGeoJson);
-      
-      // Ensure it's visible
       map.current.setLayoutProperty(layerId, 'visibility', 'visible');
       map.current.setLayoutProperty(`${layerId}-outline`, 'visibility', 'visible');
-      
-      // Update color dynamically based on magnitude
       map.current.setPaintProperty(layerId, 'fill-color', fillColor);
       map.current.setPaintProperty(`${layerId}-outline`, 'line-color', outlineColor);
     } else {
-      // First time initialization
       map.current.addSource(sourceId, {
         type: 'geojson',
         data: newGeoJson
@@ -312,9 +306,39 @@ export const MapboxContainer = ({
     }
   }, [epicenter, waveProgress, gameState, simulationOutput]);
 
+  // INJECTED 3: The CSS CSS Screen Shake Algorithm!
+  const shakeTransform = useMemo(() => {
+    if (gameState !== 'PROPAGATING' || !simulationOutput?.waveform || simulationOutput.waveform.length === 0) {
+      return 'translate(0px, 0px)';
+    }
+
+    const waveformArray = simulationOutput.waveform[0]; 
+    if (!waveformArray) return 'translate(0px, 0px)';
+
+    const totalFrames = waveformArray.length;
+    const currentIndex = Math.floor(waveProgress * (totalFrames - 1));
+    
+    const currentShakeValue = waveformArray[currentIndex] || 0;
+    const shakeIntensityMultiplier = 1500; 
+    const randomAngle = Math.random() * Math.PI * 2;
+    
+    const x = Math.cos(randomAngle) * currentShakeValue * shakeIntensityMultiplier;
+    const y = Math.sin(randomAngle) * currentShakeValue * shakeIntensityMultiplier;
+
+    return `translate(${x}px, ${y}px)`;
+  }, [waveProgress, gameState, simulationOutput]);
+
+  // INJECTED 3 (CONT): Applied the shakeTransform to the inline style of the map container
   return (
-    <div className="relative w-full h-full">
-      <div ref={mapContainer} className="w-full h-full" />
+    <div className="relative w-full h-full overflow-hidden bg-black">
+      <div 
+        ref={mapContainer} 
+        className="w-full h-full" 
+        style={{ 
+          transform: shakeTransform,
+          transition: 'transform 0.05s linear' 
+        }} 
+      />
       
       {selectedUnitType && (
         <div className="absolute top-28 left-1/2 -translate-x-1/2 bg-red-950/90 backdrop-blur-sm border border-red-500 text-red-500 px-6 py-3 rounded-none shadow-[0_0_20px_rgba(220,38,38,0.4)] pointer-events-none">

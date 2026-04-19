@@ -16,8 +16,6 @@ interface SimulationData {
   max_amplitude: number;
 }
 
-
-
 export default function App() {
   // Add App Mode State (MENU vs GAME)
   const [appMode, setAppMode] = useState<'MENU' | 'GAME'>('MENU');
@@ -48,8 +46,8 @@ export default function App() {
   
       // Fetch the ML math for the visual effects!
       try {
-        // (Adjust this URL to match wherever your Python FastAPI/Flask server is running)
-        const response = await fetch(`http://localhost:8000/simulate?lat=${lat}&lng=${lng}&magnitude=6.8`);
+        // INJECTED 1: Dynamic magnitude applied to the fetch!
+        const response = await fetch(`http://localhost:8000/simulate?lat=${lat}&lng=${lng}&magnitude=${magnitude}`);
         
         if (response.ok) {
           const data = await response.json();
@@ -82,7 +80,8 @@ export default function App() {
     placeEpicenter, 
     deployUnit, 
     GAME_STATES, 
-    setMlData // <-- Don't forget to add your new state setter to the dependency array!
+    setMlData,
+    magnitude // INJECTED 1: Added magnitude to dependencies so it reads the slider!
   ]);
 
   // Landing Page Handlers
@@ -175,6 +174,16 @@ export default function App() {
         </div>
       </div>
 
+      {/* Map Controls Hint (Visible only during setup) */}
+      {gameState === GAME_STATES.SETUP && (
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="absolute bottom-32 right-80 mr-6 z-10 bg-slate-900/80 backdrop-blur-sm px-4 py-2 rounded-lg border border-slate-700 text-xs text-slate-400 pointer-events-none"
+        >
+          Right-Click + Drag map to tilt/rotate
+        </motion.div>
+      )}
 
       {/* High Risk Alert */}
       {showLiquefactionAlert && (
