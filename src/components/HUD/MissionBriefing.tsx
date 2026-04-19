@@ -16,7 +16,7 @@ const STEPS = [
   {
     id: '02',
     title: 'SECTOR VULNERABILITY',
-    body: 'Areas closer to the epicenter are at the highest risk of liquefaction and collapse. Prioritize these zones, they are the most vulnerable. Use your scanner to assess them now.',
+    body: 'Areas closer to the epicenter are at the highest risk of liquefaction and collapse. Prioritize these zones. They are the most vulnerable. Use your scanner to assess them now.',
   },
   {
     id: '03',
