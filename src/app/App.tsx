@@ -186,6 +186,12 @@ useEffect(() => {
     setShowResultsModal(false);
   };
 
+  const handleResetSimulation = () => {
+    resetSimulation();
+    setMlData(null);
+    setShowResultsModal(false);
+  };
+
   const showLiquefactionAlert =
     waveProgress > 0.5 && gameState === GAME_STATES.PROPAGATING;
 
@@ -216,6 +222,7 @@ useEffect(() => {
         gameState={gameState}
         countdown={countdown}
         magnitude={magnitude}
+        onReturnToMenu={handleReturnToMenu}
       />
 
       <Sidebar
@@ -226,7 +233,7 @@ useEffect(() => {
         onMagnitudeChange={setMagnitude}
         onPanicModeToggle={() => {}}
         onStart={startSimulation}
-        onReset={handleReturnToMenu}
+        onReset={handleResetSimulation}
       />
 
       <div className="pointer-events-none absolute left-6 top-28 z-20">
@@ -269,6 +276,7 @@ useEffect(() => {
         <ResultsScreen
           results={results}
           onReset={handleReturnToMenu}
+          onResetSimulation={handleResetSimulation}
           onViewSimulation={handleViewSimulation}
         />
       )}
@@ -284,6 +292,12 @@ useEffect(() => {
             className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold text-xs uppercase tracking-wider transition-all"
           >
             View Results
+          </button>
+          <button
+            onClick={handleResetSimulation}
+            className="px-4 py-2 bg-black border border-red-500/50 hover:border-red-500 text-red-500 font-semibold text-xs uppercase tracking-wider transition-all"
+          >
+            New Simulation
           </button>
           <button
             onClick={handleReturnToMenu}
