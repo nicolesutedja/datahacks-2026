@@ -12,9 +12,10 @@ interface Results {
 interface ResultsScreenProps {
   results: Results;
   onReset: () => void;
+  onViewSimulation?: () => void;
 }
 
-export const ResultsScreen = ({ results, onReset }: ResultsScreenProps) => {
+export const ResultsScreen = ({ results, onReset, onViewSimulation }: ResultsScreenProps) => {
   const getGrade = () => {
     const avgScore = (results.resourceEfficiency + results.predictionAccuracy) / 2;
     // Tactical Grade Colors: S is glowing white, A is bright red, lower grades fade out
@@ -223,15 +224,26 @@ export const ResultsScreen = ({ results, onReset }: ResultsScreenProps) => {
             </div>
           </motion.div>
 
-          {/* Action Button */}
-          <button
-            onClick={onReset}
-            className="w-full flex items-center justify-center gap-3 py-4 bg-red-600/10 hover:bg-red-600/20 border border-red-600 text-red-500
-                     font-bold tracking-widest text-xs uppercase transition-all shadow-[0_0_15px_rgba(220,38,38,0.2)] hover:shadow-[0_0_25px_rgba(220,38,38,0.4)]"
-          >
-            <RotateCcw className="w-4 h-4" />
-            Acknowledge & Return to Menu
-          </button>
+          {/* Action Buttons */}
+          <div className="flex gap-3">
+            {onViewSimulation && (
+              <button
+                onClick={onViewSimulation}
+                className="flex-1 flex items-center justify-center gap-3 py-4 bg-blue-600/10 hover:bg-blue-600/20 border border-blue-600 text-blue-400
+                         font-bold tracking-widest text-xs uppercase transition-all shadow-[0_0_15px_rgba(59,130,246,0.2)] hover:shadow-[0_0_25px_rgba(59,130,246,0.4)]"
+              >
+                <span>Explore Simulation</span>
+              </button>
+            )}
+            <button
+              onClick={onReset}
+              className="flex-1 flex items-center justify-center gap-3 py-4 bg-red-600/10 hover:bg-red-600/20 border border-red-600 text-red-500
+                       font-bold tracking-widest text-xs uppercase transition-all shadow-[0_0_15px_rgba(220,38,38,0.2)] hover:shadow-[0_0_25px_rgba(220,38,38,0.4)]"
+            >
+              <RotateCcw className="w-4 h-4" />
+              Return to Menu
+            </button>
+          </div>
         </div>
       </motion.div>
     </motion.div>

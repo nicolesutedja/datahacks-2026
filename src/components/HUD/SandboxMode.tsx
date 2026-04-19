@@ -1,11 +1,10 @@
 import { motion } from 'motion/react';
 import { AlertTriangle, ArrowLeft } from 'lucide-react';
-import { MapLibreContainer } from '../Map/MapLibreContainer';
 import { TopBar } from './TopBar';
 import { Sidebar } from './Sidebar';
 import { ResourceDock } from './ResourceDock';
 import { TasksPanel } from './TasksPanel';
-import { ResultsScreen } from '../Modals/ResultsScreen';
+import { ResultsScreen } from '../HUD/ResultsScreen';
 
 export const SandboxMode = ({
   gameState, epicenter, magnitude, units, selectedUnitType, waveProgress, countdown, results,

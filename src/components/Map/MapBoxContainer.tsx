@@ -744,7 +744,7 @@ export const MapboxContainer = ({
     if (!map.current) return;
 
     const shouldShowSimulationLayers =
-      gameState === 'PROPAGATING' && Boolean(epicenter);
+      (gameState === 'PROPAGATING' || gameState === 'RESULTS') && Boolean(epicenter);
 
     setLayerVisibility(
       map.current,

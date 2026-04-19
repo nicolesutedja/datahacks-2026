@@ -25,3 +25,6 @@ build/
 
 # Project Specific
 API_SETUP.md
+
+.DS_Store
+**/.DS_Store

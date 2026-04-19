@@ -2,13 +2,12 @@ import { useCallback, useState, useRef, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { AlertTriangle } from 'lucide-react';
 import rumbleSound from './rumble.wav';
-
 import { useGameManager } from '../hooks/useGameManager';
 import { MapboxContainer } from '../components/Map/MapBoxContainer';
 import { TopBar } from '../components/HUD/TopBar';
 import { Sidebar } from '../components/HUD/Sidebar';
 import { ResourceDock } from '../components/HUD/ResourceDock';
-import { ResultsScreen } from '../components/Modals/ResultsScreen';
+import { ResultsScreen } from '../components/HUD/ResultsScreen';
 import { TasksPanel } from '../components/HUD/TasksPanel';
 import { LandingPage } from '../components/HUD/LandingPage';
 
@@ -89,6 +88,10 @@ useEffect(() => {
         console.log("Audio blocked until user interaction");
       });
     }
+  } else if (gameState === GAME_STATES.RESULTS) {
+    audio.pause();
+    audio.currentTime = 0;
+    setShowResultsModal(true);
   } else {
     audio.pause();
     audio.currentTime = 0;
@@ -97,6 +100,7 @@ useEffect(() => {
 
   const [appMode, setAppMode] = useState<'MENU' | 'GAME'>('MENU');
   const [mlData, setMlData] = useState<SimulationOutput | null>(null);
+  const [showResultsModal, setShowResultsModal] = useState(false);
 
   
 
@@ -190,7 +194,12 @@ useEffect(() => {
   const handleReturnToMenu = () => {
     resetSimulation();
     setMlData(null);
+    setShowResultsModal(false);
     setAppMode('MENU');
+  };
+
+  const handleViewSimulation = () => {
+    setShowResultsModal(false);
   };
 
   const showLiquefactionAlert =
@@ -272,11 +281,33 @@ useEffect(() => {
         </motion.div>
       )}
 
-      {gameState === GAME_STATES.RESULTS && results && (
+      {gameState === GAME_STATES.RESULTS && results && showResultsModal && (
         <ResultsScreen
           results={results}
           onReset={handleReturnToMenu}
+          onViewSimulation={handleViewSimulation}
         />
+      )}
+
+      {gameState === GAME_STATES.RESULTS && results && !showResultsModal && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="pointer-events-auto absolute bottom-6 right-6 z-30 flex flex-col gap-2"
+        >
+          <button
+            onClick={() => setShowResultsModal(true)}
+            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold text-xs uppercase tracking-wider transition-all"
+          >
+            View Results
+          </button>
+          <button
+            onClick={handleReturnToMenu}
+            className="px-4 py-2 bg-black border border-red-500/50 hover:border-red-500 text-red-500 font-semibold text-xs uppercase tracking-wider transition-all"
+          >
+            Return to Menu
+          </button>
+        </motion.div>
       )}
     </div>
   );
