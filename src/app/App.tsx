@@ -1,6 +1,7 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useRef, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { AlertTriangle } from 'lucide-react';
+import rumbleSound from './rumble.wav';
 
 import { useGameManager } from '../hooks/useGameManager';
 import { MapboxContainer } from '../components/Map/MapBoxContainer';
@@ -10,6 +11,7 @@ import { ResourceDock } from '../components/HUD/ResourceDock';
 import { ResultsScreen } from '../components/Modals/ResultsScreen';
 import { TasksPanel } from '../components/HUD/TasksPanel';
 import { LandingPage } from '../components/HUD/LandingPage';
+
 
 interface SimulationOutput {
   waveform: number[][];
@@ -46,9 +48,6 @@ const isValidWaveform = (waveform: unknown): waveform is number[][] => {
 };
 
 export default function App() {
-  const [appMode, setAppMode] = useState<'MENU' | 'GAME'>('MENU');
-  const [mlData, setMlData] = useState<SimulationOutput | null>(null);
-
   const {
     gameState,
     epicenter,
@@ -66,6 +65,40 @@ export default function App() {
     deployUnit,
     GAME_STATES,
   } = useGameManager();
+
+   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+// initialize once
+useEffect(() => {
+  audioRef.current = new Audio(rumbleSound);
+  audioRef.current.loop = true;
+  audioRef.current.volume = 0.6;
+}, []);
+
+  useEffect(() => {
+   if (!audioRef.current) return;
+
+  const audio = audioRef.current;
+
+  if (gameState === GAME_STATES.PROPAGATING) {
+    audio.currentTime = 0;
+
+    const playPromise = audio.play();
+    if (playPromise !== undefined) {
+      playPromise.catch(() => {
+        console.log("Audio blocked until user interaction");
+      });
+    }
+  } else {
+    audio.pause();
+    audio.currentTime = 0;
+  }
+}, [gameState]);
+
+  const [appMode, setAppMode] = useState<'MENU' | 'GAME'>('MENU');
+  const [mlData, setMlData] = useState<SimulationOutput | null>(null);
+
+  
 
   const handleMapClick = useCallback(
     async (lat: number, lng: number) => {
