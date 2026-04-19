@@ -2,6 +2,8 @@
 
 **TECHTonic** is an interactive, gamified educational platform designed to simulate earthquake propagation and teach effective emergency response and mitigation strategies using Scripps Geophysics Data in Southern California. By combining real-time wave physics with tactical asset deployment, the tool helps users understand how earthquakes impact different regions and the critical importance of strategic disaster management.
 
+Check out the live website [here](https://datahacks-2026.vercel.app/)!
+
 ##  Key Features
 - **Dynamic Seismic Simulation**: Users can trigger realistic earthquakes from M5.0 to M9.0, complete with real-time visual wave propagation across an interactive 3D map.
 - **Tactical Resource Management**: Players must strategically manage a $10,000,000 budget to deploy specific soil. The effectiveness of these assets decays the further they are placed from the epicenter.
