@@ -155,7 +155,7 @@ export const LandingPage = ({ onStartScenario, onSandboxMode }: LandingPageProps
             >
               SEISMIC
             </motion.span>
-            <span className="text-white" style={{ fontFamily: 'Orbitron, sans-serif' }}>STABILIZE</span>
+            <span className="text-red-500" style={{ fontFamily: 'Orbitron, sans-serif' }}>STABILIZE</span>
           </h1>
 
           <p className="text-red-500/40 text-xs uppercase tracking-[0.3em] font-medium mt-2">
