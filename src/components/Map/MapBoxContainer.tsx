@@ -2,8 +2,6 @@ import { useEffect, useMemo, useRef } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
-import { useSeismicVisuals } from '../../hooks/useSeismicVisuals';
-
 interface Position {
   lat: number;
   lng: number;
@@ -26,6 +24,7 @@ interface MapboxContainerProps {
   epicenter: Position | null;
   units: Unit[];
   waveProgress: number;
+  magnitude: number;
   gameState: string;
   onMapClick: (lat: number, lng: number) => void;
   selectedUnitType: Unit['type'] | null;
@@ -237,9 +236,7 @@ const buildHotspotData = (
     );
 
     const pulse =
-      0.6 +
-      0.4 *
-        Math.sin(waveProgress * Math.PI * 10 + index * 0.65);
+      0.6 + 0.4 * Math.sin(waveProgress * Math.PI * 10 + index * 0.65);
 
     return {
       type: 'Feature' as const,
@@ -291,7 +288,7 @@ const ensureSimulationLayers = (map: mapboxgl.Map) => {
       source: WAVE_IDS.pSource,
       paint: {
         'fill-color': '#60a5fa',
-        'fill-opacity': 0.07,
+        'fill-opacity': 0.05,
       },
     });
   }
@@ -304,7 +301,7 @@ const ensureSimulationLayers = (map: mapboxgl.Map) => {
       paint: {
         'line-color': '#93c5fd',
         'line-width': 2,
-        'line-opacity': 0.65,
+        'line-opacity': 0.55,
       },
     });
   }
@@ -316,7 +313,7 @@ const ensureSimulationLayers = (map: mapboxgl.Map) => {
       source: WAVE_IDS.sSource,
       paint: {
         'fill-color': '#f59e0b',
-        'fill-opacity': 0.11,
+        'fill-opacity': 0.08,
       },
     });
   }
@@ -329,7 +326,7 @@ const ensureSimulationLayers = (map: mapboxgl.Map) => {
       paint: {
         'line-color': '#fbbf24',
         'line-width': 3,
-        'line-opacity': 0.9,
+        'line-opacity': 0.78,
       },
     });
   }
@@ -341,7 +338,7 @@ const ensureSimulationLayers = (map: mapboxgl.Map) => {
       source: WAVE_IDS.surfaceSource,
       paint: {
         'fill-color': '#ef4444',
-        'fill-opacity': 0.15,
+        'fill-opacity': 0.1,
       },
     });
   }
@@ -353,8 +350,8 @@ const ensureSimulationLayers = (map: mapboxgl.Map) => {
       source: WAVE_IDS.surfaceSource,
       paint: {
         'line-color': '#f87171',
-        'line-width': 4,
-        'line-opacity': 0.95,
+        'line-width': 3,
+        'line-opacity': 0.8,
       },
     });
   }
@@ -377,9 +374,9 @@ const ensureSimulationLayers = (map: mapboxgl.Map) => {
           ['linear'],
           ['get', 'intensity'],
           0,
-          10,
+          8,
           1,
-          34,
+          26,
         ],
         'circle-color': '#f97316',
         'circle-opacity': [
@@ -387,11 +384,11 @@ const ensureSimulationLayers = (map: mapboxgl.Map) => {
           ['linear'],
           ['get', 'pulse'],
           0,
-          0.08,
+          0.05,
           1,
-          0.28,
+          0.18,
         ],
-        'circle-blur': 0.8,
+        'circle-blur': 0.85,
       },
     });
   }
@@ -407,9 +404,9 @@ const ensureSimulationLayers = (map: mapboxgl.Map) => {
           ['linear'],
           ['get', 'intensity'],
           0,
-          5,
+          4,
           1,
-          16,
+          13,
         ],
         'circle-color': [
           'interpolate',
@@ -422,16 +419,16 @@ const ensureSimulationLayers = (map: mapboxgl.Map) => {
           1,
           '#ef4444',
         ],
-        'circle-stroke-width': 1.5,
-        'circle-stroke-color': 'rgba(255,255,255,0.75)',
+        'circle-stroke-width': 1.25,
+        'circle-stroke-color': 'rgba(255,255,255,0.72)',
         'circle-opacity': [
           'interpolate',
           ['linear'],
           ['get', 'pulse'],
           0,
-          0.45,
+          0.42,
           1,
-          0.95,
+          0.92,
         ],
       },
     });
@@ -464,8 +461,8 @@ const ensureSimulationLayers = (map: mapboxgl.Map) => {
         'fill-opacity': [
           'case',
           ['==', ['get', 'status'], 'DEPLOYING'],
-          0.08,
-          0.14,
+          0.06,
+          0.1,
         ],
       },
     });
@@ -489,7 +486,7 @@ const ensureSimulationLayers = (map: mapboxgl.Map) => {
           '#cbd5e1',
         ],
         'line-width': 2,
-        'line-opacity': 0.85,
+        'line-opacity': 0.75,
         'line-dasharray': [
           'case',
           ['==', ['get', 'status'], 'DEPLOYING'],
@@ -517,6 +514,7 @@ export const MapboxContainer = ({
   epicenter,
   units,
   waveProgress,
+  magnitude,
   gameState,
   onMapClick,
   selectedUnitType,
@@ -527,16 +525,6 @@ export const MapboxContainer = ({
   const map = useRef<mapboxgl.Map | null>(null);
   const epicenterMarker = useRef<mapboxgl.Marker | null>(null);
   const unitMarkers = useRef<Map<number, mapboxgl.Marker>>(new Map());
-
-  useSeismicVisuals(
-    simulationOutput
-      ? {
-          waveform: simulationOutput.waveform,
-          maxAmplitude: simulationOutput.max_amplitude,
-        }
-      : null,
-    gameState === 'PROPAGATING'
-  );
 
   const onMapClickRef = useRef(onMapClick);
   useEffect(() => {
@@ -780,11 +768,18 @@ export const MapboxContainer = ({
     const maxAmplitude = simulationOutput?.max_amplitude ?? 0.018;
     const amplitudeScale = Math.max(0.45, Math.min(maxAmplitude / 0.02, 2.5));
 
-    const pRadiusMeters = waveProgress * 9500 * amplitudeScale;
+    const magnitudeSpeedFactor = Math.max(0.75, 0.75 + (magnitude - 5.0) * 0.18);
+
+    const pRadiusMeters =
+      waveProgress * 9500 * magnitudeSpeedFactor * amplitudeScale;
+
     const sProgress = Math.max(0, (waveProgress - 0.08) / 0.92);
-    const sRadiusMeters = sProgress * 16500 * amplitudeScale;
+    const sRadiusMeters =
+      sProgress * 16500 * magnitudeSpeedFactor * amplitudeScale;
+
     const surfaceProgress = Math.max(0, (waveProgress - 0.16) / 0.84);
-    const surfaceRadiusMeters = surfaceProgress * 23000 * amplitudeScale;
+    const surfaceRadiusMeters =
+      surfaceProgress * 23000 * magnitudeSpeedFactor * amplitudeScale;
 
     const pSource = map.current.getSource(WAVE_IDS.pSource) as mapboxgl.GeoJSONSource;
     const sSource = map.current.getSource(WAVE_IDS.sSource) as mapboxgl.GeoJSONSource;
@@ -822,19 +817,19 @@ export const MapboxContainer = ({
     map.current.setPaintProperty(
       WAVE_IDS.pFill,
       'fill-opacity',
-      0.05 + 0.02 * Math.sin(waveProgress * Math.PI * 6)
+      0.04 + 0.015 * Math.sin(waveProgress * Math.PI * 6)
     );
     map.current.setPaintProperty(
       WAVE_IDS.sFill,
       'fill-opacity',
-      0.08 + 0.04 * Math.sin(waveProgress * Math.PI * 5)
+      0.06 + 0.025 * Math.sin(waveProgress * Math.PI * 5)
     );
     map.current.setPaintProperty(
       WAVE_IDS.surfaceFill,
       'fill-opacity',
-      0.1 + 0.06 * Math.sin(waveProgress * Math.PI * 4)
+      0.08 + 0.04 * Math.sin(waveProgress * Math.PI * 4)
     );
-  }, [epicenter, gameState, simulationOutput, waveProgress]);
+  }, [epicenter, gameState, magnitude, simulationOutput, waveProgress]);
 
   const shakeTransform = useMemo(() => {
     if (
@@ -846,15 +841,26 @@ export const MapboxContainer = ({
     }
 
     const mainWave = simulationOutput.waveform[0];
-    if (!mainWave || mainWave.length === 0) return 'translate(0px, 0px)';
+    if (!Array.isArray(mainWave) || mainWave.length === 0) {
+      return 'translate(0px, 0px)';
+    }
 
-    const currentIndex = Math.floor(waveProgress * (mainWave.length - 1));
-    const currentShakeValue = mainWave[currentIndex] ?? 0;
-    const randomAngle = Math.random() * Math.PI * 2;
-    const intensityMultiplier = 1400;
+    const currentIndex = Math.min(
+      mainWave.length - 1,
+      Math.max(0, Math.floor(waveProgress * (mainWave.length - 1)))
+    );
 
-    const x = Math.cos(randomAngle) * currentShakeValue * intensityMultiplier;
-    const y = Math.sin(randomAngle) * currentShakeValue * intensityMultiplier;
+    const currentShakeValue = Math.abs(mainWave[currentIndex] ?? 0);
+
+    if (currentShakeValue < 0.002) {
+      return 'translate(0px, 0px)';
+    }
+
+    const angle = waveProgress * Math.PI * 24;
+    const intensityMultiplier = 220;
+
+    const x = Math.cos(angle) * currentShakeValue * intensityMultiplier;
+    const y = Math.sin(angle) * currentShakeValue * intensityMultiplier;
 
     return `translate(${x}px, ${y}px)`;
   }, [gameState, simulationOutput, waveProgress]);
@@ -866,7 +872,10 @@ export const MapboxContainer = ({
         className="h-full w-full"
         style={{
           transform: shakeTransform,
-          transition: gameState === 'PROPAGATING' ? 'transform 70ms linear' : 'transform 300ms ease-out',
+          transition:
+            gameState === 'PROPAGATING'
+              ? 'transform 70ms linear'
+              : 'transform 300ms ease-out',
         }}
       />
 

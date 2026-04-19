@@ -17,21 +17,6 @@ interface SimulationOutput {
   pgv: number[];
 }
 
-const buildFallbackWaveform = (receiverCount = 16, frameCount = 600): number[][] => {
-  return Array.from({ length: receiverCount }, (_, receiverIndex) => {
-    const phaseOffset = receiverIndex * 0.45;
-    const attenuation = 1 - receiverIndex * 0.035;
-
-    return Array.from({ length: frameCount }, (_, frameIndex) => {
-      const t = frameIndex / frameCount;
-      const envelope = Math.exp(-3.2 * t);
-      const primary = Math.sin((t * 24 + phaseOffset) * Math.PI * 2);
-      const secondary = 0.45 * Math.sin((t * 42 + phaseOffset * 0.7) * Math.PI * 2);
-      return (primary + secondary) * 0.018 * attenuation * envelope;
-    });
-  });
-};
-
 const computeMaxAmplitude = (waveform: number[][]): number => {
   return waveform.reduce((globalMax, receiverWave) => {
     const receiverMax = receiverWave.reduce((max, value) => Math.max(max, Math.abs(value)), 0);
@@ -42,6 +27,21 @@ const computeMaxAmplitude = (waveform: number[][]): number => {
 const computePgv = (waveform: number[][]): number[] => {
   return waveform.map((receiverWave) =>
     receiverWave.reduce((max, value) => Math.max(max, Math.abs(value)), 0)
+  );
+};
+
+const isValidWaveform = (waveform: unknown): waveform is number[][] => {
+  return (
+    Array.isArray(waveform) &&
+    waveform.length > 0 &&
+    waveform.every(
+      (receiverWave) =>
+        Array.isArray(receiverWave) &&
+        receiverWave.length > 0 &&
+        receiverWave.every(
+          (value) => typeof value === 'number' && Number.isFinite(value)
+        )
+    )
   );
 };
 
@@ -72,30 +72,45 @@ export default function App() {
       if (gameState === GAME_STATES.SETUP && !epicenter) {
         placeEpicenter(lat, lng);
 
+        const apiBase =
+          import.meta.env.VITE_SEISMIC_API_URL?.trim() || 'http://localhost:8000';
+
         try {
           const response = await fetch(
-            `http://localhost:8000/simulate?lat=${lat}&lng=${lng}&magnitude=${magnitude}`
+            `${apiBase}/simulate?lat=${lat}&lng=${lng}&magnitude=${magnitude}`
           );
 
           if (!response.ok) {
-            throw new Error('Backend response not OK');
+            throw new Error(`Backend response not OK: ${response.status}`);
           }
 
           const data = await response.json();
+          console.log('Seismic backend response:', data);
 
-          const waveform: number[][] = Array.isArray(data.waveform)
-            ? data.waveform
-            : Array.isArray(data.wave)
-              ? data.wave
-              : buildFallbackWaveform();
+          const waveformCandidate =
+            isValidWaveform(data.waveform)
+              ? data.waveform
+              : isValidWaveform(data.wave)
+                ? data.wave
+                : null;
+
+          if (!waveformCandidate) {
+            console.error('Invalid ML waveform payload:', data);
+            setMlData(null);
+            return;
+          }
+
+          const waveform = waveformCandidate;
 
           const maxAmplitude =
-            typeof data.max_amplitude === 'number'
+            typeof data.max_amplitude === 'number' && Number.isFinite(data.max_amplitude)
               ? data.max_amplitude
               : computeMaxAmplitude(waveform);
 
           const pgv =
-            Array.isArray(data.pgv) && data.pgv.length > 0
+            Array.isArray(data.pgv) &&
+            data.pgv.length > 0 &&
+            data.pgv.every((value: unknown) => typeof value === 'number' && Number.isFinite(value))
               ? data.pgv
               : computePgv(waveform);
 
@@ -106,13 +121,7 @@ export default function App() {
           });
         } catch (error) {
           console.error('Failed to fetch ML data:', error);
-
-          const fallbackWaveform = buildFallbackWaveform();
-          setMlData({
-            waveform: fallbackWaveform,
-            max_amplitude: computeMaxAmplitude(fallbackWaveform),
-            pgv: computePgv(fallbackWaveform),
-          });
+          setMlData(null);
         }
       } else if (
         selectedUnitType &&
@@ -135,6 +144,7 @@ export default function App() {
   const handleStartScenario = () => {
     resetSimulation();
     setMagnitude(6.8);
+    setMlData(null);
     setAppMode('GAME');
   };
 
@@ -168,6 +178,7 @@ export default function App() {
         epicenter={epicenter}
         units={units}
         waveProgress={waveProgress}
+        magnitude={magnitude}
         gameState={gameState}
         onMapClick={handleMapClick}
         selectedUnitType={selectedUnitType}
