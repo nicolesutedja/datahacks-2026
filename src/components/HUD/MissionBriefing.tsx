@@ -16,7 +16,7 @@ const STEPS = [
   {
     id: '02',
     title: 'SECTOR VULNERABILITY',
-    body: 'Red zones indicate liquefaction failure. These are areas most vulnerable to earthquakes. Use your scanner to identify your priority targets now.',
+    body: 'Areas closer to the epicenter are at the highest risk of liquefaction and collapse. Prioritize these zones, they are the most vulnerable. Use your scanner to assess them now.',
   },
   {
     id: '03',
@@ -26,7 +26,7 @@ const STEPS = [
   {
     id: '04',
     title: 'IMPACT EVALUATION',
-    body: 'Post-event data will confirm survival rates. Analysis is final. See what held, and what we lost. Good luck, Captain.',
+    body: 'Post-event data will confirm survival rates. Analysis is final. See what held, and what we lost. Good luck, recruit.',
   },
 ];
 
