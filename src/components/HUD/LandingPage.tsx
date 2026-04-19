@@ -1,24 +1,38 @@
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useState } from 'react';
 import { SeismicBackground } from './SeismicBackground';
 import { PulseButton } from './PulseButton';
 import logoImage from '../ui/logo.png';
+import { X, Settings, Info, Activity, ShieldCheck } from 'lucide-react';
 
 interface LandingPageProps {
   onStartScenario: () => void;
   onSandboxMode: () => void;
 }
 
-export const LandingPage = ({
-  onStartScenario,
-  onSandboxMode,
-}: LandingPageProps) => {
+export const LandingPage = ({ onStartScenario, onSandboxMode }: LandingPageProps) => {
   const [showAbout, setShowAbout] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-
-  // fake settings state (UI only for now)
   const [soundOn, setSoundOn] = useState(true);
   const [intensity, setIntensity] = useState(6.8);
+
+  // --- STAGGERED ENTRANCE ANIMATIONS ---
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: { staggerChildren: 0.15, delayChildren: 0.2 }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: { 
+      y: 0, 
+      opacity: 1,
+      transition: { type: 'spring', stiffness: 100 } 
+    }
+  };
 
   const shake = {
     whileHover: {
@@ -30,137 +44,160 @@ export const LandingPage = ({
   };
 
   return (
-    <div className="size-full relative overflow-hidden bg-slate-950">
+    <div className="size-full relative overflow-hidden bg-slate-950 font-mono">
+      {/* KEEPING BACKGROUND FUNCTIONAL: 
+         SeismicBackground stays at the bottom and retains mouse listeners 
+      */}
       <SeismicBackground />
 
-      {/* ================= ABOUT MODAL ================= */}
-      {showAbout && (
-        <div className="absolute inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center">
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="w-[600px] bg-slate-900 border border-red-600 p-6 text-white"
+      {/* TACTICAL SCANLINE OVERLAY */}
+      <div className="pointer-events-none absolute inset-0 z-50 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.05),rgba(0,255,0,0.02),rgba(0,0,255,0.05))] bg-[length:100%_4px,3px_100%] opacity-20 mix-blend-overlay" />
+
+      <AnimatePresence>
+        {/* ================= MODALS ================= */}
+        {(showAbout || showSettings) && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-center justify-center p-4"
           >
-            <h2 className="text-2xl font-bold text-red-500 mb-4">
-              About Seismic Simulator
-            </h2>
-
-            <p className="text-sm text-white/70 mb-4">
-              Real-time earthquake simulation with wave propagation, structural
-              damage modeling, and emergency response strategy.
-            </p>
-
-            <button
-              onClick={() => setShowAbout(false)}
-              className="mt-4 px-4 py-2 bg-red-600 text-black font-bold"
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="w-[600px] bg-slate-900 border border-red-600 p-6 text-white shadow-[0_0_30px_rgba(220,38,38,0.2)]"
             >
-              Close
-            </button>
-          </motion.div>
-        </div>
-      )}
-
-      {/* ================= SETTINGS MODAL ================= */}
-      {showSettings && (
-        <div className="absolute inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center">
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="w-[600px] bg-slate-900 border border-red-600 p-6 text-white"
-          >
-            <h2 className="text-2xl font-bold text-red-500 mb-6">
-              Settings
-            </h2>
-
-            {/* SOUND TOGGLE */}
-            <div className="flex justify-between items-center mb-6">
-              <span className="text-sm">Sound Effects</span>
-              <button
-                onClick={() => setSoundOn(!soundOn)}
-                className={`px-4 py-2 text-xs font-bold ${
-                  soundOn ? 'bg-green-600' : 'bg-red-600'
-                } text-black`}
-              >
-                {soundOn ? 'ON' : 'OFF'}
-              </button>
-            </div>
-
-            {/* INTENSITY SLIDER */}
-            <div className="mb-6">
-              <div className="flex justify-between text-sm mb-2">
-                <span>Magnitude Intensity</span>
-                <span className="text-red-400">{intensity.toFixed(1)}</span>
+              <div className="flex justify-between items-center mb-6 border-b border-red-900/50 pb-4">
+                <h2 className="text-2xl font-bold text-red-500 flex items-center gap-3">
+                  {showSettings ? <Settings className="w-5 h-5" /> : <Info className="w-5 h-5" />}
+                  {showSettings ? 'SETTINGS' : 'ABOUT SYSTEM'}
+                </h2>
+                <button onClick={() => { setShowAbout(false); setShowSettings(false); }} className="text-red-900 hover:text-red-500">
+                  <X className="w-6 h-6" />
+                </button>
               </div>
 
-              <input
-                type="range"
-                min="4"
-                max="9"
-                step="0.1"
-                value={intensity}
-                onChange={(e) => setIntensity(Number(e.target.value))}
-                className="w-full"
-              />
-            </div>
+              {showAbout ? (
+                <div className="space-y-4">
+                  <p className="text-sm text-white/70 leading-relaxed uppercase">
+                    Real-time earthquake simulation utilizing high-fidelity wave propagation models, 
+                    structural damage analysis, and tactical emergency response deployment.
+                  </p>
+                  <div className="flex items-center gap-2 text-[10px] text-red-900 font-bold tracking-widest">
+                    <ShieldCheck className="w-4 h-4" /> SECURE TERMINAL ACCESS GRANTED
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-8">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm uppercase tracking-wider">Audio Feedback</span>
+                    <button onClick={() => setSoundOn(!soundOn)} className={`px-4 py-2 text-xs font-bold ${soundOn ? 'bg-red-600 text-black' : 'border border-red-600 text-red-600'}`}>
+                      {soundOn ? 'ACTIVE' : 'MUTED'}
+                    </button>
+                  </div>
+                </div>
+              )}
 
-            <button
-              onClick={() => setShowSettings(false)}
-              className="mt-2 px-4 py-2 bg-red-600 text-black font-bold"
-            >
-              Close
-            </button>
+              <button onClick={() => { setShowAbout(false); setShowSettings(false); }} className="mt-8 px-6 py-2 bg-red-600 text-black font-bold uppercase tracking-widest text-xs hover:bg-red-500 transition-colors w-full">
+                Close Terminal
+              </button>
+            </motion.div>
           </motion.div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
 
-      {/* ================= MAIN ================= */}
-      <div className="relative z-10 size-full flex flex-col items-center justify-center gap-12 px-8 pointer-events-none h-screen">
+      {/* ================= MAIN INTERFACE ================= */}
+      <motion.div 
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="relative z-10 size-full flex flex-col items-center justify-center gap-12 px-8 h-screen pointer-events-none"
+      >
+        {/* TITLE BLOCK */}
+        <motion.div variants={itemVariants} className="text-center mb-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 1 }}
+            className="flex items-center justify-center mb-6"
+          >
+            <motion.img
+              src={logoImage}
+              alt="Logo"
+              className="w-24 h-24 opacity-80"
+              style={{
+                filter: 'drop-shadow(0px 0px 12px rgba(220,38,38,0.4))'
+              }}
+              animate={{ 
+                filter: [
+                  'drop-shadow(0px 0px 12px rgba(220,38,38,0.4))',
+                  'drop-shadow(0px 0px 24px rgba(220,38,38,0.7))',
+                  'drop-shadow(0px 0px 12px rgba(220,38,38,0.4))'
+                ] 
+              }}
+              transition={{ duration: 3, repeat: Infinity }}
+            />
+          </motion.div>
 
-        {/* TITLE */}
-        <motion.div className="text-center">
-          <motion.img
-            src={logoImage}
-            className="w-24 h-24 opacity-80 mx-auto mb-4"
-          />
-
-          <h1 className="text-6xl font-black text-red-600">
-            SEISMIC SIMULATOR
+          <h1 
+            className="text-7xl font-black text-red-600 tracking-tighter" 
+            style={{ 
+              fontFamily: 'Orbitron, sans-serif',
+              // Adds a dynamic "shimmer" to the text
+              textShadow: '0 0 15px rgba(220, 38, 38, 0.4)'
+            }}
+          >
+            <motion.span
+              animate={{ opacity: [1, 0.8, 1, 0.9, 1] }}
+              style={{ fontFamily: 'Inter, sans-serif' }}
+              transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+            >
+              SEISMIC
+            </motion.span>
+            <span className="text-white" style={{ fontFamily: 'Orbitron, sans-serif' }}>STABILIZE</span>
           </h1>
+
+          <p className="text-red-500/40 text-xs uppercase tracking-[0.3em] font-medium mt-2">
+            An app for simulating seismic events and tactical response strategies.
+          </p>
         </motion.div>
 
-        {/* SHAKING BUTTONS */}
-        <div className="flex gap-6 pointer-events-auto">
+        {/* PRIMARY ACTIONS */}
+        <motion.div variants={itemVariants} className="flex items-center gap-6 pointer-events-auto">
           <motion.div {...shake}>
-            <PulseButton onClick={onStartScenario}>
-              Game Mode
+            <PulseButton variant="primary" onClick={onStartScenario}>
+              <span style={{ fontFamily: 'Orbitron, sans-serif' }}>Game Mode</span>
             </PulseButton>
           </motion.div>
 
           <motion.div {...shake}>
-            <PulseButton onClick={onSandboxMode}>
-              Sandbox
+            <PulseButton variant="secondary" onClick={onSandboxMode}>
+              <span style={{ fontFamily: 'Orbitron, sans-serif' }}>Sandbox</span>
             </PulseButton>
           </motion.div>
-        </div>
+        </motion.div>
 
-        {/* UTILITY BUTTONS */}
-        <div className="flex gap-6 pointer-events-auto">
-          <PulseButton 
-          variant="tertiary" 
-          onClick={() => setShowSettings(true)}
-          >
-             Settings
+        {/* UTILITY ACTIONS */}
+        <motion.div variants={itemVariants} className="flex gap-6 pointer-events-auto">
+          <PulseButton variant="tertiary" onClick={() => setShowSettings(true)}>
+            <span style={{ fontFamily: 'Orbitron, sans-serif' }}>Settings</span>
           </PulseButton>
 
-          <PulseButton
-            variant="tertiary"
-            onClick={() => setShowAbout(true)}
-          >
-            About
+          <PulseButton variant="tertiary" onClick={() => setShowAbout(true)}>
+            <span style={{ fontFamily: 'Orbitron, sans-serif' }}>About</span>
           </PulseButton>
-        </div>
+        </motion.div>
 
-      </div>
+        {/* STATUS BAR */}
+        <motion.div 
+          variants={itemVariants}
+          className="absolute bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-3 text-red-900/40 text-[10px] tracking-widest"
+        >
+          <Activity className="w-3 h-3 text-red-600 animate-pulse" />
+          <span className="uppercase font-bold">System Online // Connected</span>
+        </motion.div>
+      </motion.div>
     </div>
   );
 };
