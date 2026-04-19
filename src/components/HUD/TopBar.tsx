@@ -33,34 +33,33 @@ export const TopBar = ({ gameState, countdown, magnitude }: TopBarProps) => {
       case 'SETUP':
         return {
           label: 'STANDBY',
-          color: 'text-red-500/70',
-          bgColor: 'bg-red-950/20',
-          borderColor: 'border-red-900/30',
-          icon: Activity
+          color: 'text-red-600 dark:text-red-400',
+          bgColor: 'bg-gray-100 dark:bg-red-950/20',
+          borderColor: 'border-gray-300 dark:border-red-900/30',
+          icon: Activity,
         };
       case 'PROPAGATING':
         return {
-          label: 'ACTIVE RUPTURE',
-          color: 'text-red-500',
-          bgColor: 'bg-red-900/40',
-          borderColor: 'border-red-500',
-          icon: Waves
+           label: 'ACTIVE RUPTURE',
+          color: 'text-red-700 dark:text-red-500',
+          bgColor: 'bg-red-100 dark:bg-red-900/40',
+          borderColor: 'border-red-300 dark:border-red-500',
+          icon: Waves,
         };
       case 'RESULTS':
         return {
-          label: 'ANALYSIS',
-          color: 'text-amber-500',
-          bgColor: 'bg-amber-950/30',
-          borderColor: 'border-amber-900/50',
-          icon: Activity
+         color: 'text-amber-600 dark:text-amber-400',
+          bgColor: 'bg-amber-100 dark:bg-amber-950/30',
+          borderColor: 'border-amber-300 dark:border-amber-900/50',
+          icon: Activity,
         };
       default:
         return {
-          label: 'OFFLINE',
-          color: 'text-slate-600',
-          bgColor: 'bg-black',
-          borderColor: 'border-slate-800',
-          icon: Activity
+         label: 'OFFLINE',
+          color: 'text-gray-500 dark:text-slate-500',
+          bgColor: 'bg-gray-100 dark:bg-black',
+          borderColor: 'border-gray-300 dark:border-slate-800',
+          icon: Activity,
         };
     }
   };
@@ -69,10 +68,39 @@ export const TopBar = ({ gameState, countdown, magnitude }: TopBarProps) => {
   const StatusIcon = status.icon;
 
   const getRiskLevel = () => {
-    if (magnitude < 5.5) return { label: 'LOW', color: 'text-green-500', bg: 'bg-green-950/20', border: 'border-green-900/30' };
-    if (magnitude < 6.5) return { label: 'MODERATE', color: 'text-yellow-500', bg: 'bg-yellow-950/20', border: 'border-yellow-900/30' };
-    if (magnitude < 7.5) return { label: 'HIGH', color: 'text-orange-500', bg: 'bg-orange-950/20', border: 'border-orange-900/30' };
-    return { label: 'EXTREME', color: 'text-red-500', bg: 'bg-red-950/40', border: 'border-red-500' };
+    if (magnitude < 5.5) {
+      return {
+        label: 'LOW',
+        color: 'text-green-600 dark:text-green-400',
+        bg: 'bg-green-100 dark:bg-green-950/20',
+        border: 'border-green-300 dark:border-green-900/30',
+      };
+    }
+
+    if (magnitude < 6.5) {
+      return {
+        label: 'MODERATE',
+        color: 'text-yellow-600 dark:text-yellow-400',
+        bg: 'bg-yellow-100 dark:bg-yellow-950/20',
+        border: 'border-yellow-300 dark:border-yellow-900/30',
+      };
+    }
+
+    if (magnitude < 7.5) {
+      return {
+        label: 'HIGH',
+        color: 'text-orange-600 dark:text-orange-400',
+        bg: 'bg-orange-100 dark:bg-orange-950/20',
+        border: 'border-orange-300 dark:border-orange-900/30',
+      };
+    }
+
+    return {
+      label: 'EXTREME',
+      color: 'text-red-700 dark:text-red-500',
+      bg: 'bg-red-100 dark:bg-red-950/40',
+      border: 'border-red-300 dark:border-red-500',
+    };
   };
 
   const risk = getRiskLevel();
