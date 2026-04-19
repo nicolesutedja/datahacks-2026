@@ -174,14 +174,7 @@ useEffect(() => {
     const lng = -118.8 + Math.random() * (-116.5 - (-118.8));
   
     // 🎲 Realistic magnitude distribution
-    const r = Math.random();
-    let mag;
-    if (r < 0.6) mag = 4.5 + Math.random();
-    else if (r < 0.85) mag = 5.5 + Math.random();
-    else if (r < 0.97) mag = 6.5 + Math.random();
-    else mag = 7.5 + Math.random() * 1.5;
-  
-    mag = Number(mag.toFixed(1));
+    const mag = Number((5 + Math.random() * 4).toFixed(1));
   
     console.log("🎲 RANDOM EQ:", { lat, lng, mag });
   
