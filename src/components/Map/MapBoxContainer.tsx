@@ -29,6 +29,7 @@ interface MapboxContainerProps {
   magnitude: number;
   gameState: string;
   onMapClick: (lat: number, lng: number) => void;
+  onRegionInsightClick: (lat: number, lng: number) => void;
   selectedUnitType: Unit['type'] | null;
   simulationOutput: SimulationOutput | null;
   onZoneClick: (zone: any) => void;
@@ -518,6 +519,7 @@ export const MapboxContainer = ({
   magnitude,
   gameState,
   onMapClick,
+  onRegionInsightClick,
   selectedUnitType,
   simulationOutput,
   onZoneClick,
@@ -531,6 +533,11 @@ export const MapboxContainer = ({
   useEffect(() => {
     onMapClickRef.current = onMapClick;
   }, [onMapClick]);
+
+  const onRegionInsightClickRef = useRef(onRegionInsightClick);
+  useEffect(() => {
+    onRegionInsightClickRef.current = onRegionInsightClick;
+  }, [onRegionInsightClick]);
 
   const onZoneClickRef = useRef(onZoneClick);
   useEffect(() => {
@@ -556,59 +563,6 @@ export const MapboxContainer = ({
 
     instance.on('load', () => {
       if (!map.current) return;
-
-      const vulnerabilityZones = {
-        type: 'FeatureCollection',
-        features: [
-          {
-            type: 'Feature',
-            properties: {
-              id: 'zone-1',
-              riskLevel: 'critical',
-              health: 30,
-              type: 'liquefaction',
-            },
-            geometry: {
-              type: 'Polygon',
-              coordinates: [
-                [
-                  [-117.27, 32.83],
-                  [-117.26, 32.83],
-                  [-117.26, 32.84],
-                  [-117.27, 32.84],
-                  [-117.27, 32.83],
-                ],
-              ],
-            },
-          },
-        ],
-      };
-
-      map.current.addSource('vulnerability-zones', {
-        type: 'geojson',
-        data: vulnerabilityZones as any,
-      });
-
-      map.current.addLayer({
-        id: 'zone-fill',
-        type: 'fill',
-        source: 'vulnerability-zones',
-        paint: {
-          'fill-color': ['step', ['get', 'health'], '#dc2626', 40, '#f97316', 70, '#54d630'],
-          'fill-opacity': 0.35,
-        },
-      });
-
-      map.current.addLayer({
-        id: 'zone-outline',
-        type: 'line',
-        source: 'vulnerability-zones',
-        paint: {
-          'line-color': '#ff0000',
-          'line-width': 2,
-          'line-dasharray': [2, 2],
-        },
-      });
 
       map.current.addSource('mapbox-dem', {
         type: 'raster-dem',
@@ -647,6 +601,38 @@ export const MapboxContainer = ({
         },
       });
 
+      map.current.addSource('liquefaction-zones', {
+        type: 'geojson',
+        data: '/data/CGS_Liquefaction_Zones.geojson',
+      });
+      console.log(
+        "Liquefaction data:",
+        map.current.getSource('liquefaction-zones')
+      );
+      fetch('/data/CGS_Liquefaction_Zones.geojson')
+        .then(res => res.json())
+        .then(data => console.log("GeoJSON features:", data.features.length));
+
+      map.current.addLayer({
+        id: 'liquefaction-fill',
+        type: 'fill',
+        source: 'liquefaction-zones',
+        paint: {
+          'fill-color': '#00ffff',
+          'fill-opacity': 0.6,
+        },
+      });
+
+      map.current.addLayer({
+        id: 'liquefaction-outline',
+        type: 'line',
+        source: 'liquefaction-zones',
+        paint: {
+          'line-color': '#00ffff',
+          'line-width': 3,
+        },
+      });
+
       ensureSimulationLayers(map.current);
 
       setLayerVisibility(
@@ -664,7 +650,7 @@ export const MapboxContainer = ({
         false
       );
 
-      map.current.on('click', 'zone-fill', (event) => {
+      map.current.on('click', 'liquefaction-fill', (event) => {
         const feature = event.features?.[0];
         if (feature) {
           onZoneClickRef.current(feature);
@@ -676,7 +662,17 @@ export const MapboxContainer = ({
     instance.addControl(new mapboxgl.FullscreenControl(), 'left');
 
     instance.on('click', (e) => {
+      if (e.originalEvent.ctrlKey || e.originalEvent.metaKey) {
+        onRegionInsightClickRef.current(e.lngLat.lat, e.lngLat.lng);
+        return;
+      }
+
       onMapClickRef.current(e.lngLat.lat, e.lngLat.lng);
+    });
+
+    instance.on('contextmenu', (e) => {
+      e.preventDefault();
+      onRegionInsightClickRef.current(e.lngLat.lat, e.lngLat.lng);
     });
 
     return () => {
@@ -810,7 +806,6 @@ export const MapboxContainer = ({
     hotspotSource?.setData(
       buildHotspotData(epicenter, pgv, riskClasses, waveProgress) as any
     );
-
 
     map.current.setPaintProperty(
       WAVE_IDS.pFill,

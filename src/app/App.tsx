@@ -113,43 +113,48 @@ export default function App() {
   const [showRegionPopup, setShowRegionPopup] = useState(false);
   const [regionInsightLoading, setRegionInsightLoading] = useState(false);
 
-  const handleMapClick = useCallback(
+  const handleRegionInsightClick = useCallback(
     async (lat: number, lng: number) => {
       const apiBase =
         import.meta.env.VITE_SEISMIC_API_URL?.trim() || 'http://localhost:8000';
 
-      if (appMode === 'GAME') {
-        try {
-          setRegionInsightLoading(true);
-          setShowRegionPopup(true);
+      try {
+        setRegionInsightLoading(true);
+        setShowRegionPopup(true);
 
-          const response = await fetch(
-            `${apiBase}/region-insight?lat=${lat}&lng=${lng}`
-          );
+        const response = await fetch(
+          `${apiBase}/region-insight?lat=${lat}&lng=${lng}`
+        );
 
-          if (!response.ok) {
-            throw new Error(`Region insight response not OK: ${response.status}`);
-          }
-
-          const data = await response.json();
-          setRegionInsight(data);
-        } catch (error) {
-          console.error('Failed to fetch region insight:', error);
-          setRegionInsight({
-            regionName: 'Region Insight Unavailable',
-            soilSummary: 'Could not fetch region insight for this location.',
-            populationDensity: 'Unknown',
-            earthquakeHazards: ['ground shaking'],
-            recommendedAction: 'Try clicking again or check backend logs.',
-          });
-        } finally {
-          setRegionInsightLoading(false);
+        if (!response.ok) {
+          throw new Error(`Region insight response not OK: ${response.status}`);
         }
-        return;
-      }
 
+        const data = await response.json();
+        setRegionInsight(data);
+      } catch (error) {
+        console.error('Failed to fetch region insight:', error);
+        setRegionInsight({
+          regionName: 'Region Insight Unavailable',
+          soilSummary: 'Could not fetch region insight for this location.',
+          populationDensity: 'Unknown',
+          earthquakeHazards: ['ground shaking'],
+          recommendedAction: 'Try again or check backend logs.',
+        });
+      } finally {
+        setRegionInsightLoading(false);
+      }
+    },
+    []
+  );
+
+  const handleMapClick = useCallback(
+    async (lat: number, lng: number) => {
       if (gameState === GAME_STATES.SETUP && !epicenter) {
         placeEpicenter(lat, lng);
+
+        const apiBase =
+          import.meta.env.VITE_SEISMIC_API_URL?.trim() || 'http://localhost:8000';
 
         try {
           const response = await fetch(
@@ -189,7 +194,6 @@ export default function App() {
       }
     },
     [
-      appMode,
       gameState,
       epicenter,
       selectedUnitType,
@@ -224,7 +228,7 @@ export default function App() {
 
     const mag = Number((5 + Math.random() * 4).toFixed(1));
 
-    console.log("🎲 RANDOM EQ:", { lat, lng, mag });
+    console.log("RANDOM EQ:", { lat, lng, mag });
 
     placeEpicenter(lat, lng);
     setMagnitude(mag);
@@ -311,6 +315,7 @@ export default function App() {
         magnitude={magnitude}
         gameState={gameState}
         onMapClick={handleMapClick}
+        onRegionInsightClick={handleRegionInsightClick}
         selectedUnitType={selectedUnitType}
         simulationOutput={mlData}
         onZoneClick={() => {}}

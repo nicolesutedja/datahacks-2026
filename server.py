@@ -50,7 +50,7 @@ Return ONLY valid JSON with this exact schema:
 {{
   "regionName": "short readable region name",
   "soilSummary": "1-2 sentence summary of likely soil/ground conditions",
-  "populationDensity": "short phrase like low, medium, high, very high",
+  "populationDensity": "short phrase with a rounded estimate",
   "earthquakeHazards": ["hazard 1", "hazard 2", "hazard 3"],
   "recommendedAction": "1-2 sentence practical recommendation"
 }}
