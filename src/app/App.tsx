@@ -179,7 +179,9 @@ export default function App() {
             max_amplitude: data.max_amplitude ?? 0.02,
             pgv: data.adjusted_pgv ?? data.pgv,
             risk_classes: data.risk_classes,
-            confidence: data.confidence
+            confidence: data.confidence,
+            soil_heatmap: data.soil_heatmap,
+            epicenter_soil: data.epicenter_soil,
           });
 
         } catch (error) {
@@ -254,7 +256,9 @@ export default function App() {
         max_amplitude: data.max_amplitude ?? 0.02,
         pgv: data.adjusted_pgv ?? data.pgv,
         risk_classes: data.risk_classes,
-        confidence: data.confidence
+        confidence: data.confidence,
+        soil_heatmap: data.soil_heatmap,
+        epicenter_soil: data.epicenter_soil,
       });
 
       startSimulation();

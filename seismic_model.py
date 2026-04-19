@@ -1,25 +1,20 @@
 import math
+import sys
 from pathlib import Path
 
 import joblib
 import numpy as np
 import pandas as pd
-import sys
 import rasterio
 from scipy.interpolate import RBFInterpolator
 from sklearn.base import BaseEstimator, RegressorMixin
 from sklearn.decomposition import PCA
-from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import StandardScaler
-
 
 # =========================================================
 # PATHS
 # =========================================================
-
 ROOT = Path(__file__).resolve().parent
 ARTIFACTS_DIR = ROOT / "artifacts"
-
 ROM_MODEL_PATH = ARTIFACTS_DIR / "rom_model.joblib"
 PCA_PATH = ARTIFACTS_DIR / "pca.joblib"
 SOURCE_LOCATIONS_PATH = ROOT / "source_locations.csv"
@@ -29,28 +24,28 @@ VS30_CANDIDATES = [
     ROOT / "California_vs30_Wills15_hybrid_sd.tif",
 ]
 
-
 # =========================================================
 # CONSTANTS
 # =========================================================
-
 LA_JOLLA_LAT = 32.8328
 LA_JOLLA_LNG = -117.2713
-
 N_RECEIVERS = 16
 N_TIMESTEPS = 600
-
 REFERENCE_MAGNITUDE = 5.0
 MAGNITUDE_ALPHA = 0.5
 
+# Soil heatmap controls
+SOIL_MIN_STEP_DEGREES = 0.0028
+SOIL_MAX_POINTS_PER_AXIS = 120
+SOIL_LOCAL_FILL_RADIUS = 2
+SOIL_MIN_VALID_NEIGHBORS = 3
 
 # =========================================================
 # CUSTOM RBF WRAPPER
-# Needed so joblib can deserialize your trained rom_model.joblib
+# Needed so joblib can deserialize rom_model.joblib
 # =========================================================
-
 class RBFWrapper(BaseEstimator, RegressorMixin):
-    def __init__(self, kernel="cubic", epsilon=None):
+    def __init__(self, kernel: str = "cubic", epsilon=None):
         self.kernel = kernel
         self.epsilon = epsilon
         self.interp_ = None
@@ -73,13 +68,13 @@ class RBFWrapper(BaseEstimator, RegressorMixin):
             raise ValueError("The model is not fitted yet.")
         return self.interp_(np.array(X))
 
+
 sys.modules["__main__"].RBFWrapper = RBFWrapper
 sys.modules["__mp_main__"].RBFWrapper = RBFWrapper
 
 # =========================================================
 # LOAD ARTIFACTS ONCE
 # =========================================================
-
 def _load_vs30_dataset():
     for path in VS30_CANDIDATES:
         if path.exists():
@@ -97,14 +92,14 @@ vs30_dataset = _load_vs30_dataset()
 vs30_map = vs30_dataset.read(1)
 print("Artifacts loaded successfully.")
 
-
 # =========================================================
 # CORE MODEL HELPERS
 # =========================================================
-
-def magnitude_scale(magnitude: float,
-                    reference_magnitude: float = REFERENCE_MAGNITUDE,
-                    alpha: float = MAGNITUDE_ALPHA) -> float:
+def magnitude_scale(
+    magnitude: float,
+    reference_magnitude: float = REFERENCE_MAGNITUDE,
+    alpha: float = MAGNITUDE_ALPHA,
+) -> float:
     return 10 ** (alpha * (magnitude - reference_magnitude))
 
 
@@ -137,7 +132,6 @@ def predict_earthquake_numeric_response(
     Returns base + scaled wave and PGV.
     """
     X_new = np.array([[length, width, depth]], dtype=np.float32)
-
     base_wave = reconstruct_wave_from_rom(
         model_rom=model_rom,
         pca=pca,
@@ -147,7 +141,6 @@ def predict_earthquake_numeric_response(
 
     scale = magnitude_scale(magnitude, reference_magnitude, alpha)
     scaled_wave = base_wave * scale
-
     base_pgv = np.max(np.abs(base_wave), axis=-1)
     scaled_pgv = np.max(np.abs(scaled_wave), axis=-1)
 
@@ -158,11 +151,9 @@ def predict_earthquake_numeric_response(
         "scaled_pgv": scaled_pgv,
     }
 
-
 # =========================================================
 # UI / GEO HELPERS
 # =========================================================
-
 def latlng_to_model_coords(lat: float, lng: float):
     """
     Convert frontend lat/lng into the model coordinate system used by the notebook.
@@ -176,21 +167,17 @@ def latlng_to_model_coords(lat: float, lng: float):
 
 def get_vs30(lat: float, lng: float):
     """
-    Sample the VS30 raster at a lat/lng.
-    Returns a float or None.
+    Sample the VS30 raster at a lat/lng. Returns a float or None.
     """
     try:
         row, col = vs30_dataset.index(lng, lat)
-
         if row < 0 or col < 0 or row >= vs30_map.shape[0] or col >= vs30_map.shape[1]:
             return None
 
         val = vs30_map[row, col]
-
         if np.isnan(val) or val <= 0:
             return None
 
-        # Notebook had this normalization guard
         if val < 10:
             val = val * 1000
 
@@ -215,6 +202,50 @@ def vs30_to_soil_factor(vs30):
     return 0.9
 
 
+def vs30_to_site_class(vs30):
+    """
+    NEHRP-style site classes from Vs30.
+    """
+    if vs30 is None:
+        return "Unknown"
+    if vs30 < 180:
+        return "E"
+    if vs30 < 360:
+        return "D"
+    if vs30 < 760:
+        return "C"
+    if vs30 < 1500:
+        return "B"
+    return "A"
+
+
+def vs30_to_soil_strength_score(vs30):
+    """
+    Normalize VS30 to a user-facing 0..1 soil strength score.
+    Higher = stronger/stiffer ground.
+    """
+    if vs30 is None:
+        return None
+
+    lo, hi = 120.0, 1000.0
+    clipped = max(lo, min(hi, float(vs30)))
+    return (clipped - lo) / (hi - lo)
+
+
+def soil_strength_label(score):
+    if score is None:
+        return "unknown"
+    if score < 0.2:
+        return "very weak"
+    if score < 0.4:
+        return "weak"
+    if score < 0.6:
+        return "moderate"
+    if score < 0.8:
+        return "strong"
+    return "very strong"
+
+
 def pgv_to_risk_class(pgv: float) -> str:
     if pgv < 0.01:
         return "low"
@@ -228,14 +259,12 @@ def pgv_to_risk_class(pgv: float) -> str:
 def confidence_from_click(lat: float, lng: float) -> str:
     """
     Confidence based on proximity to known training source locations,
-    but measured in the model's coordinate space, since source_locations.csv
-    has length/width/depth rather than lat/lng.
+    measured in model coordinate space since source_locations.csv
+    stores length/width/depth rather than lat/lng.
     """
     length_km, width_km, _ = latlng_to_model_coords(lat, lng)
-
     train_coords = source_locations[["length", "width"]].to_numpy(dtype=np.float32)
     click_coord = np.array([length_km, width_km], dtype=np.float32)
-
     dists = np.linalg.norm(train_coords - click_coord, axis=1)
     min_dist = float(np.min(dists))
 
@@ -246,13 +275,244 @@ def confidence_from_click(lat: float, lng: float) -> str:
     return "low"
 
 
+def build_receiver_soil_samples(lat: float, lng: float, count: int):
+    """
+    Keeps the original fake receiver spread logic, but returns richer soil metadata.
+    """
+    samples = []
+    for i in range(count):
+        offset_lat = lat + (i * 0.002)
+        offset_lng = lng + (i * 0.002)
+        vs30 = get_vs30(offset_lat, offset_lng)
+        soil_factor = vs30_to_soil_factor(vs30)
+        soil_strength = vs30_to_soil_strength_score(vs30)
+
+        samples.append(
+            {
+                "lat": float(offset_lat),
+                "lng": float(offset_lng),
+                "vs30": None if vs30 is None else float(vs30),
+                "soil_factor": float(soil_factor),
+                "soil_strength": None if soil_strength is None else float(soil_strength),
+                "soil_strength_label": soil_strength_label(soil_strength),
+                "site_class": vs30_to_site_class(vs30),
+            }
+        )
+    return samples
+
+
+def estimate_surface_wave_radius_km(magnitude: float) -> float:
+    """
+    Match the CURRENT frontend outer visible ring instead of the old oversized estimate.
+    Frontend uses:
+      magnitudeSpeedFactor = max(0.9, 1 + (magnitude - 5.0) * 0.35)
+      surfaceRadiusMeters = 65000 * magnitudeSpeedFactor * amplitudeScale
+    with amplitudeScale ~= 1 here.
+    """
+    magnitude_speed_factor = max(0.9, 1.0 + (magnitude - 5.0) * 0.35)
+    radius_meters = 65000.0 * magnitude_speed_factor
+    return radius_meters / 1000.0
+
+
+def _neighbor_fill(grid: np.ndarray, valid_mask: np.ndarray, circle_mask: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Fill only small local gaps near valid land samples so the heatmap becomes continuous
+    without bleeding far into water/off-map areas.
+    """
+    filled = grid.copy()
+    filled_mask = valid_mask.copy()
+    rows, cols = grid.shape
+
+    for _ in range(2):
+        updates = []
+        for r in range(rows):
+            for c in range(cols):
+                if not circle_mask[r, c]:
+                    continue
+                if filled_mask[r, c]:
+                    continue
+
+                values = []
+                weights = []
+
+                for dr in range(-SOIL_LOCAL_FILL_RADIUS, SOIL_LOCAL_FILL_RADIUS + 1):
+                    for dc in range(-SOIL_LOCAL_FILL_RADIUS, SOIL_LOCAL_FILL_RADIUS + 1):
+                        if dr == 0 and dc == 0:
+                            continue
+
+                        rr = r + dr
+                        cc = c + dc
+                        if rr < 0 or rr >= rows or cc < 0 or cc >= cols:
+                            continue
+                        if not circle_mask[rr, cc]:
+                            continue
+                        if not filled_mask[rr, cc]:
+                            continue
+
+                        dist = math.sqrt(dr * dr + dc * dc)
+                        if dist == 0:
+                            continue
+
+                        values.append(filled[rr, cc])
+                        weights.append(1.0 / dist)
+
+                if len(values) >= SOIL_MIN_VALID_NEIGHBORS:
+                    weighted = float(np.average(np.array(values), weights=np.array(weights)))
+                    updates.append((r, c, weighted))
+
+        if not updates:
+            break
+
+        for r, c, weighted in updates:
+            filled[r, c] = weighted
+            filled_mask[r, c] = True
+
+    return filled, filled_mask
+
+
+def _smooth_grid(grid: np.ndarray, valid_mask: np.ndarray) -> np.ndarray:
+    """
+    Light local smoothing so the output behaves like one continuous heatmap.
+    """
+    smoothed = grid.copy()
+    rows, cols = grid.shape
+
+    for r in range(rows):
+        for c in range(cols):
+            if not valid_mask[r, c]:
+                continue
+
+            values = []
+            for dr in (-1, 0, 1):
+                for dc in (-1, 0, 1):
+                    rr = r + dr
+                    cc = c + dc
+                    if rr < 0 or rr >= rows or cc < 0 or cc >= cols:
+                        continue
+                    if valid_mask[rr, cc]:
+                        values.append(grid[rr, cc])
+
+            if values:
+                smoothed[r, c] = float(np.mean(values))
+
+    return smoothed
+
+
+def build_soil_heatmap(lat: float, lng: float, magnitude: float):
+    """
+    Build a dense, continuous soil heatmap that expands from the epicenter out to the
+    SAME outer circle the user sees, and stops there.
+
+    It stays effectively land-only by starting from direct VS30 samples and only filling
+    tiny local gaps near valid samples, instead of extrapolating broadly across water.
+    """
+    radius_km = estimate_surface_wave_radius_km(magnitude)
+
+    radius_deg_lat = radius_km / 111.0
+    cos_lat = max(math.cos(math.radians(lat)), 0.2)
+    radius_deg_lng = radius_km / (111.0 * cos_lat)
+
+    # Dense enough to blend continuously, but not absurdly huge.
+    target_axis_points = min(
+        SOIL_MAX_POINTS_PER_AXIS,
+        max(85, int(radius_km * 3.2))
+    )
+
+    step_lat = max(SOIL_MIN_STEP_DEGREES, (2.0 * radius_deg_lat) / target_axis_points)
+    step_lng = max(SOIL_MIN_STEP_DEGREES, (2.0 * radius_deg_lng) / target_axis_points)
+
+    lat_offsets = np.arange(-radius_deg_lat, radius_deg_lat + step_lat, step_lat)
+    lng_offsets = np.arange(-radius_deg_lng, radius_deg_lng + step_lng, step_lng)
+
+    n_rows = len(lat_offsets)
+    n_cols = len(lng_offsets)
+
+    soil_grid = np.full((n_rows, n_cols), np.nan, dtype=np.float32)
+    valid_mask = np.zeros((n_rows, n_cols), dtype=bool)
+    circle_mask = np.zeros((n_rows, n_cols), dtype=bool)
+
+    for r, dlat in enumerate(lat_offsets):
+        for c, dlng in enumerate(lng_offsets):
+            dy_km = float(dlat) * 111.0
+            dx_km = float(dlng) * 111.0 * cos_lat
+            dist_km = math.sqrt(dx_km * dx_km + dy_km * dy_km)
+
+            if dist_km > radius_km:
+                continue
+
+            circle_mask[r, c] = True
+
+            sample_lat = lat + float(dlat)
+            sample_lng = lng + float(dlng)
+
+            vs30 = get_vs30(sample_lat, sample_lng)
+            soil_strength = vs30_to_soil_strength_score(vs30)
+
+            if soil_strength is None:
+                continue
+
+            soil_grid[r, c] = float(soil_strength)
+            valid_mask[r, c] = True
+
+    soil_grid, valid_mask = _neighbor_fill(soil_grid, valid_mask, circle_mask)
+    valid_mask = valid_mask & circle_mask
+    soil_grid = _smooth_grid(soil_grid, valid_mask)
+
+    features = []
+
+    for r, dlat in enumerate(lat_offsets):
+        for c, dlng in enumerate(lng_offsets):
+            if not circle_mask[r, c]:
+                continue
+            if not valid_mask[r, c]:
+                continue
+
+            sample_lat = lat + float(dlat)
+            sample_lng = lng + float(dlng)
+            strength = float(soil_grid[r, c])
+
+            approx_vs30 = 120.0 + strength * (1000.0 - 120.0)
+            soil_factor = vs30_to_soil_factor(approx_vs30)
+
+            dy_km = float(dlat) * 111.0
+            dx_km = float(dlng) * 111.0 * cos_lat
+            dist_km = math.sqrt(dx_km * dx_km + dy_km * dy_km)
+
+            features.append(
+                {
+                    "type": "Feature",
+                    "geometry": {
+                        "type": "Point",
+                        "coordinates": [float(sample_lng), float(sample_lat)],
+                    },
+                    "properties": {
+                        "vs30": float(approx_vs30),
+                        "soil_strength": strength,
+                        "soil_strength_label": soil_strength_label(strength),
+                        "soil_factor": float(soil_factor),
+                        "site_class": vs30_to_site_class(approx_vs30),
+                        "distance_km": float(dist_km),
+                    },
+                }
+            )
+
+    return {
+        "type": "FeatureCollection",
+        "features": features,
+        "meta": {
+            "radius_km": float(radius_km),
+            "step_lat": float(step_lat),
+            "step_lng": float(step_lng),
+            "point_count": len(features),
+        },
+    }
+
 # =========================================================
 # MAIN PUBLIC FUNCTION FOR FASTAPI
 # =========================================================
-
 def simulate(lat: float, lng: float, magnitude: float):
     """
-    Main entry point for your FastAPI server.
+    Main entry point for FastAPI server.
     Returns a frontend-ready JSON-serializable dict.
     """
     length_km, width_km, depth_km = latlng_to_model_coords(lat, lng)
@@ -274,31 +534,40 @@ def simulate(lat: float, lng: float, magnitude: float):
     adjusted_pgv = []
     soil_factors = []
     vs30_values = []
+    soil_strength_values = []
+    site_classes = []
     risk_classes = []
 
-    # Same "fake receiver spread" logic you were already using conceptually
+    receiver_soil = build_receiver_soil_samples(lat, lng, len(scaled_pgv))
+
     for i, base_pgv in enumerate(scaled_pgv):
-        offset_lat = lat + (i * 0.002)
-        offset_lng = lng + (i * 0.002)
+        soil_sample = receiver_soil[i]
+        soil_factor = soil_sample["soil_factor"]
+        adjusted = float(base_pgv) * float(soil_factor)
 
-        vs30 = get_vs30(offset_lat, offset_lng)
-        soil_factor = vs30_to_soil_factor(vs30)
-
-        adj = float(base_pgv) * soil_factor
-
-        vs30_values.append(vs30)
+        adjusted_pgv.append(float(adjusted))
         soil_factors.append(float(soil_factor))
-        adjusted_pgv.append(float(adj))
-        risk_classes.append(pgv_to_risk_class(adj))
+        vs30_values.append(soil_sample["vs30"])
+        soil_strength_values.append(soil_sample["soil_strength"])
+        site_classes.append(soil_sample["site_class"])
+        risk_classes.append(pgv_to_risk_class(adjusted))
 
     confidence = confidence_from_click(lat, lng)
-
-    # Optional extra frontend fields, based on notebook
     max_amplitude = float(np.max(np.abs(scaled_wave)))
+
     liquefaction = [
-        float((adj ** 1.5) * (soil_factor - 1.0 if soil_factor > 1.0 else 0.1) * 5)
+        float(
+            (adj ** 1.5)
+            * (soil_factor - 1.0 if soil_factor > 1.0 else 0.1)
+            * 5
+        )
         for adj, soil_factor in zip(adjusted_pgv, soil_factors)
     ]
+
+    soil_heatmap = build_soil_heatmap(lat, lng, magnitude)
+
+    epicenter_vs30 = get_vs30(lat, lng)
+    epicenter_soil_strength = vs30_to_soil_strength_score(epicenter_vs30)
 
     return {
         "waveform": scaled_wave.tolist(),
@@ -307,6 +576,17 @@ def simulate(lat: float, lng: float, magnitude: float):
         "risk_classes": risk_classes,
         "soil_factors": soil_factors,
         "vs30": vs30_values,
+        "soil_strength": soil_strength_values,
+        "site_classes": site_classes,
+        "receiver_soil": receiver_soil,
+        "soil_heatmap": soil_heatmap,
+        "epicenter_soil": {
+            "vs30": None if epicenter_vs30 is None else float(epicenter_vs30),
+            "soil_strength": None if epicenter_soil_strength is None else float(epicenter_soil_strength),
+            "soil_strength_label": soil_strength_label(epicenter_soil_strength),
+            "soil_factor": float(vs30_to_soil_factor(epicenter_vs30)),
+            "site_class": vs30_to_site_class(epicenter_vs30),
+        },
         "confidence": confidence,
         "max_amplitude": max_amplitude,
         "pgv_heatmap": adjusted_pgv,
@@ -320,12 +600,10 @@ def simulate(lat: float, lng: float, magnitude: float):
     }
 
 
-# =========================================================
-# LOCAL TEST
-# =========================================================
-
 if __name__ == "__main__":
     test = simulate(lat=32.85, lng=-117.25, magnitude=6.8)
     print("Waveform shape:", np.array(test["waveform"]).shape)
     print("Adjusted PGV length:", len(test["adjusted_pgv"]))
+    print("Soil heatmap points:", len(test["soil_heatmap"]["features"]))
+    print("Soil heatmap meta:", test["soil_heatmap"]["meta"])
     print("Confidence:", test["confidence"])

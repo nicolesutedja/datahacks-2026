@@ -50,12 +50,6 @@ const WAVE_IDS = {
   surfaceLine: 'surface-wave-line',
 };
 
-const HOTSPOT_IDS = {
-  source: 'seismic-hotspots-source',
-  layer: 'seismic-hotspots-layer',
-  glowLayer: 'seismic-hotspots-glow-layer',
-};
-
 const RESOURCE_RADIUS_IDS = {
   source: 'resource-radii-source',
   fill: 'resource-radii-fill',
@@ -215,54 +209,6 @@ const buildResourceRadiusData = (units: Unit[]) => {
   };
 };
 
-const buildHotspotData = (
-  epicenter: Position,
-  pgv: number[] = [],
-  riskClasses: string[] = [],
-  waveProgress: number
-) => {
-  const usablePgv = pgv.length > 0 ? pgv : Array.from({ length: 16 }, () => 0);
-  const maxPgv = Math.max(...usablePgv, 0.0001);
-
-  const features = usablePgv.map((value, index) => {
-    const normalized = value / maxPgv;
-    const ring = Math.floor(index / 4);
-    const slot = index % 4;
-
-    const baseRadiusMeters = 2200 + ring * 1700 + slot * 450;
-    const animatedRadiusMeters = baseRadiusMeters * (0.85 + waveProgress * 0.45);
-    const angle = index * 22.5 + ring * 8;
-    const [lng, lat] = destinationPoint(
-      epicenter.lng,
-      epicenter.lat,
-      angle,
-      animatedRadiusMeters
-    );
-
-    const pulse = 0.8;
-
-    return {
-      type: 'Feature' as const,
-      properties: {
-        id: `receiver-${index}`,
-        pgv: value,
-        intensity: normalized,
-        pulse,
-        risk: riskClasses[index] || 'low',
-      },
-      geometry: {
-        type: 'Point' as const,
-        coordinates: [lng, lat],
-      },
-    };
-  });
-
-  return {
-    type: 'FeatureCollection' as const,
-    features,
-  };
-};
-
 const ensureSimulationLayers = (map: mapboxgl.Map) => {
   if (!map.getSource(WAVE_IDS.pSource)) {
     map.addSource(WAVE_IDS.pSource, {
@@ -356,82 +302,6 @@ const ensureSimulationLayers = (map: mapboxgl.Map) => {
         'line-color': '#f87171',
         'line-width': 3,
         'line-opacity': 0.8,
-      },
-    });
-  }
-
-  if (!map.getSource(HOTSPOT_IDS.source)) {
-    map.addSource(HOTSPOT_IDS.source, {
-      type: 'geojson',
-      data: EMPTY_FEATURE_COLLECTION,
-    });
-  }
-
-  if (!map.getLayer(HOTSPOT_IDS.glowLayer)) {
-    map.addLayer({
-      id: HOTSPOT_IDS.glowLayer,
-      type: 'circle',
-      source: HOTSPOT_IDS.source,
-      paint: {
-        'circle-radius': [
-          'interpolate',
-          ['linear'],
-          ['get', 'intensity'],
-          0,
-          8,
-          1,
-          26,
-        ],
-        'circle-color': '#f97316',
-        'circle-opacity': [
-          'interpolate',
-          ['linear'],
-          ['get', 'pulse'],
-          0,
-          0.05,
-          1,
-          0.18,
-        ],
-        'circle-blur': 0.85,
-      },
-    });
-  }
-
-  if (!map.getLayer(HOTSPOT_IDS.layer)) {
-    map.addLayer({
-      id: HOTSPOT_IDS.layer,
-      type: 'circle',
-      source: HOTSPOT_IDS.source,
-      paint: {
-        'circle-radius': [
-          'interpolate',
-          ['linear'],
-          ['get', 'intensity'],
-          0,
-          4,
-          1,
-          13,
-        ],
-        'circle-color': [
-          'match',
-          ['get', 'risk'],
-          'low', '#22c55e',
-          'moderate', '#facc15',
-          'high', '#f97316',
-          'extreme', '#ef4444',
-          '#94a3b8'
-        ],
-        'circle-stroke-width': 1.25,
-        'circle-stroke-color': 'rgba(255,255,255,0.72)',
-        'circle-opacity': [
-          'interpolate',
-          ['linear'],
-          ['get', 'pulse'],
-          0,
-          0.42,
-          1,
-          0.92,
-        ],
       },
     });
   }
@@ -605,13 +475,10 @@ export const MapboxContainer = ({
         type: 'geojson',
         data: '/data/CGS_Liquefaction_Zones.geojson',
       });
-      console.log(
-        "Liquefaction data:",
-        map.current.getSource('liquefaction-zones')
-      );
+
       fetch('/data/CGS_Liquefaction_Zones.geojson')
-        .then(res => res.json())
-        .then(data => console.log("GeoJSON features:", data.features.length));
+        .then((res) => res.json())
+        .then((data) => console.log('GeoJSON features:', data.features.length));
 
       map.current.addLayer({
         id: 'liquefaction-fill',
@@ -644,8 +511,6 @@ export const MapboxContainer = ({
           WAVE_IDS.sLine,
           WAVE_IDS.surfaceFill,
           WAVE_IDS.surfaceLine,
-          HOTSPOT_IDS.glowLayer,
-          HOTSPOT_IDS.layer,
         ],
         false
       );
@@ -658,7 +523,10 @@ export const MapboxContainer = ({
       });
     });
 
-    instance.addControl(new mapboxgl.NavigationControl({ visualizePitch: true }), 'left');
+    instance.addControl(
+      new mapboxgl.NavigationControl({ visualizePitch: true }),
+      'left'
+    );
     instance.addControl(new mapboxgl.FullscreenControl(), 'left');
 
     instance.on('click', (e) => {
@@ -752,8 +620,6 @@ export const MapboxContainer = ({
         WAVE_IDS.sLine,
         WAVE_IDS.surfaceFill,
         WAVE_IDS.surfaceLine,
-        HOTSPOT_IDS.glowLayer,
-        HOTSPOT_IDS.layer,
       ],
       shouldShowSimulationLayers
     );
@@ -783,9 +649,6 @@ export const MapboxContainer = ({
     const surfaceSource = map.current.getSource(
       WAVE_IDS.surfaceSource
     ) as mapboxgl.GeoJSONSource;
-    const hotspotSource = map.current.getSource(
-      HOTSPOT_IDS.source
-    ) as mapboxgl.GeoJSONSource;
 
     pSource?.setData(
       createGeoJSONCircle([epicenter.lng, epicenter.lat], Math.max(pRadiusMeters, 1)) as any
@@ -798,13 +661,6 @@ export const MapboxContainer = ({
         [epicenter.lng, epicenter.lat],
         Math.max(surfaceRadiusMeters, 1)
       ) as any
-    );
-
-    const pgv = simulationOutput?.pgv ?? [];
-    const riskClasses = simulationOutput?.risk_classes ?? [];
-
-    hotspotSource?.setData(
-      buildHotspotData(epicenter, pgv, riskClasses, waveProgress) as any
     );
 
     map.current.setPaintProperty(
