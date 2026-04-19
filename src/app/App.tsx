@@ -376,13 +376,13 @@ export default function App() {
       )}
 
       {showRegionPopup && (
-        <div className="pointer-events-auto absolute left-6 bottom-28 z-40 w-[24rem] border border-cyan-400/40 bg-black/90 p-4 shadow-[0_0_20px_rgba(34,211,238,0.15)] backdrop-blur-md">
+        <div className="pointer-events-auto absolute left-6 bottom-70 z-40 w-[24rem] border border-green-400/40 bg-black/90 p-4 shadow-[0_0_20px_rgba(34,211,238,0.15)] backdrop-blur-md">
           <div className="mb-3 flex items-start justify-between">
             <div>
-              <div className="text-[10px] uppercase tracking-[0.24em] text-cyan-300/80">
+              <div className="text-[10px] uppercase tracking-[0.24em] text-green-400/80">
                 Region Analysis
               </div>
-              <div className="mt-1 text-lg font-semibold text-white">
+              <div className="mt-1 text-lg font-semibold text-green-500">
                 {regionInsightLoading
                   ? 'Loading...'
                   : (regionInsight?.regionName ?? 'Region Insight')}
@@ -403,21 +403,21 @@ export default function App() {
           ) : regionInsight ? (
             <div className="space-y-3 text-sm text-zinc-200">
               <div>
-                <div className="mb-1 text-[10px] uppercase tracking-[0.22em] text-cyan-300/70">
+                <div className="mb-1 text-[10px] uppercase tracking-[0.22em] text-green-500/70">
                   Soil
                 </div>
                 <div>{regionInsight.soilSummary}</div>
               </div>
 
               <div>
-                <div className="mb-1 text-[10px] uppercase tracking-[0.22em] text-cyan-300/70">
+                <div className="mb-1 text-[10px] uppercase tracking-[0.22em] text-green-500/70">
                   Population Density
                 </div>
                 <div>{regionInsight.populationDensity}</div>
               </div>
 
               <div>
-                <div className="mb-1 text-[10px] uppercase tracking-[0.22em] text-cyan-300/70">
+                <div className="mb-1 text-[10px] uppercase tracking-[0.22em] text-green-500/70">
                   Earthquake Hazards
                 </div>
                 <ul className="list-disc pl-5 space-y-1">
@@ -428,7 +428,7 @@ export default function App() {
               </div>
 
               <div>
-                <div className="mb-1 text-[10px] uppercase tracking-[0.22em] text-cyan-300/70">
+                <div className="mb-1 text-[10px] uppercase tracking-[0.22em] text-green-500/70">
                   Recommended Action
                 </div>
                 <div>{regionInsight.recommendedAction}</div>
