@@ -125,7 +125,11 @@ Do not include markdown.
     }
 
     try:
-        response = requests.post(url, json=payload, timeout=20)
+        headers = {
+            "Content-Type": "application/json",
+        }
+
+        response = requests.post(url, headers=headers, json=payload, timeout=20)
         response.raise_for_status()
         data = response.json()
         text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
@@ -141,6 +145,8 @@ Do not include markdown.
 
     except Exception as e:
         print("Gemini region insight failed:", repr(e))
+        if 'response' in locals():
+            print("Gemini response text:", response.text)
         return {
             "regionName": "Southern California Region",
             "soilSummary": (
