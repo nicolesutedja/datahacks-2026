@@ -148,7 +148,7 @@ export const TopBar = ({ gameState, countdown, magnitude, onReturnToMenu }: TopB
                 transition={{ duration: 0.4 }}
                 onClick={onReturnToMenu}
               >
-                SEISMIC SIMULATOR
+                TECHTonic
               </motion.h1>
               <p className="text-[10px] text-red-500/50 tracking-widest uppercase">Tactical Response v3.7</p>
             </div>

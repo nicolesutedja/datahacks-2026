@@ -1,8 +1,8 @@
 import { useCallback, useState, useRef, useEffect } from 'react';
-import { Volume2, VolumeX } from 'lucide-react'; // Import icons for your mute button
 import { motion } from 'motion/react';
-import { AlertTriangle, X } from 'lucide-react';
+import { AlertTriangle, X, Volume2, VolumeX } from 'lucide-react';
 import rumbleSound from './11labs-earthquake-sound.mp3';
+import bgMusicFile from './seismic-bgmusic.mp3'; // <-- Your music file
 import { useGameManager } from '../hooks/useGameManager';
 import { MapboxContainer } from '../components/Map/MapBoxContainer';
 import { TopBar } from '../components/HUD/TopBar';
@@ -11,7 +11,6 @@ import { ResourceDock } from '../components/HUD/ResourceDock';
 import { ResultsScreen } from '../components/HUD/ResultsScreen';
 import { TasksPanel } from '../components/HUD/TasksPanel';
 import { LandingPage } from '../components/HUD/LandingPage';
-import bgMusicFile from './seismic-bgmusic.mp3';
 
 interface SimulationOutput {
   waveform: number[][];
@@ -28,6 +27,34 @@ interface RegionInsight {
   earthquakeHazards: string[];
   recommendedAction: string;
 }
+
+const computeMaxAmplitude = (waveform: number[][]): number => {
+  return waveform.reduce((globalMax, receiverWave) => {
+    const receiverMax = receiverWave.reduce((max, value) => Math.max(max, Math.abs(value)), 0);
+    return Math.max(globalMax, receiverMax);
+  }, 0);
+};
+
+const computePgv = (waveform: number[][]): number[] => {
+  return waveform.map((receiverWave) =>
+    receiverWave.reduce((max, value) => Math.max(max, Math.abs(value)), 0)
+  );
+};
+
+const isValidWaveform = (waveform: unknown): waveform is number[][] => {
+  return (
+    Array.isArray(waveform) &&
+    waveform.length > 0 &&
+    waveform.every(
+      (receiverWave) =>
+        Array.isArray(receiverWave) &&
+        receiverWave.length > 0 &&
+        receiverWave.every(
+          (value) => typeof value === 'number' && Number.isFinite(value)
+        )
+    )
+  );
+};
 
 export default function App() {
   const {
@@ -56,13 +83,12 @@ export default function App() {
   const [regionInsight, setRegionInsight] = useState<RegionInsight | null>(null);
   const [showRegionPopup, setShowRegionPopup] = useState(false);
   const [regionInsightLoading, setRegionInsightLoading] = useState(false);
-  
+
   // --- Audio State ---
   const [isMusicMuted, setIsMusicMuted] = useState(false);
-  const [isSfxMuted, setIsSfxMuted] = useState(false); // Added SFX state
-  
+  const [isSfxMuted, setIsSfxMuted] = useState(false);
   const bgMusicRef = useRef<HTMLAudioElement | null>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null); // This is your rumble sound
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // 1. Initialize Background Music and attempt Autoplay
   useEffect(() => {
@@ -76,40 +102,33 @@ export default function App() {
       try {
         if (bgMusicRef.current && bgMusicRef.current.paused && !isMusicMuted) {
            await bgMusicRef.current.play();
-           console.log("Audio autoplay successful");
         }
       } catch (err) {
-        console.log("Autoplay blocked. Waiting for user interaction.", err);
+        console.log("Autoplay blocked. Waiting for first user interaction.", err);
       }
     };
 
     startMusic();
-// --- NEW: The "First Interaction" Unlocker ---
-    // This catches the very first click anywhere on the page and starts the music.
+
     const unlockAudio = () => {
-      // We check the ref's muted property because it stays up to date in this closure
       if (bgMusicRef.current && bgMusicRef.current.paused && !bgMusicRef.current.muted) {
         bgMusicRef.current.play().catch(() => {});
       }
-      // Once the audio is unlocked, clean up the listeners so they don't fire every click
       document.removeEventListener('click', unlockAudio);
       document.removeEventListener('keydown', unlockAudio);
     };
 
-    // Listen for any click or keypress
     document.addEventListener('click', unlockAudio);
     document.addEventListener('keydown', unlockAudio);
 
     return () => {
-      if (bgMusicRef.current) {
-        bgMusicRef.current.pause();
-      }
+      if (bgMusicRef.current) bgMusicRef.current.pause();
       document.removeEventListener('click', unlockAudio);
       document.removeEventListener('keydown', unlockAudio);
     };
-  }, []);
+  }, []); 
 
-  // 2. Handle Music Toggling
+  // 2. Audio Control Helpers
   const toggleMusic = () => {
     if (bgMusicRef.current) {
       if (isMusicMuted) {
@@ -122,32 +141,27 @@ export default function App() {
     }
   };
 
-  // 3. Handle SFX Toggling (Rumble)
-  const toggleSfx = () => {
-    setIsSfxMuted(!isSfxMuted);
-  };
+  const toggleSfx = () => setIsSfxMuted(!isSfxMuted);
 
-  // Apply SFX Mute State to the Rumble
-  useEffect(() => {
-    if (audioRef.current) {
-        audioRef.current.muted = isSfxMuted;
-    }
-  }, [isSfxMuted]);
-
-  // Helper to ensure music is playing when entering the game
   const ensureMusicPlaying = () => {
     if (bgMusicRef.current && bgMusicRef.current.paused && !isMusicMuted) {
         bgMusicRef.current.play().catch(() => {});
     }
-  }
+  };
 
-  // Initialize Rumble Sound
+  // 3. Initialize Rumble Sound
   useEffect(() => {
     audioRef.current = new Audio(rumbleSound);
     audioRef.current.loop = true;
     audioRef.current.volume = 0.6;
-    audioRef.current.muted = isSfxMuted; // Set initial mute state
   }, []);
+
+  // Sync SFX state with rumble
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.muted = isSfxMuted;
+    }
+  }, [isSfxMuted]);
 
   // Manage Rumble Playback based on Game State
   useEffect(() => {
@@ -156,44 +170,67 @@ export default function App() {
 
     if (gameState === GAME_STATES.PROPAGATING) {
       audio.currentTime = 0;
-      audio.play().catch(() => console.log("Audio blocked"));
+      audio.play().catch(() => console.log("Audio blocked until user interaction"));
     } else if (gameState === GAME_STATES.RESULTS) {
       audio.pause();
+      audio.currentTime = 0;
       setShowResultsModal(true);
     } else {
       audio.pause();
+      audio.currentTime = 0;
     }
   }, [gameState, GAME_STATES]);
 
-  const handleRegionInsightClick = useCallback(async (lat: number, lng: number) => {
-    const apiBase = import.meta.env.VITE_SEISMIC_API_URL?.trim() || 'http://localhost:8000';
-    try {
-      setRegionInsightLoading(true);
-      setShowRegionPopup(true);
-      const response = await fetch(`${apiBase}/region-insight?lat=${lat}&lng=${lng}`);
-      const data = await response.json();
-      setRegionInsight(data);
-    } catch (error) {
-      setRegionInsight({
-        regionName: 'Data Error',
-        soilSummary: 'Geologic feed interrupted.',
-        populationDensity: 'Unknown',
-        earthquakeHazards: ['Seismic noise detected'],
-        recommendedAction: 'Re-scan sector.',
-      });
-    } finally {
-      setRegionInsightLoading(false);
-    }
-  }, []);
-
-  const handleMapClick = useCallback(async (lat: number, lng: number) => {
-    if (gameState === GAME_STATES.SETUP && !epicenter) {
-      placeEpicenter(lat, lng);
+  const handleRegionInsightClick = useCallback(
+    async (lat: number, lng: number) => {
       const apiBase = import.meta.env.VITE_SEISMIC_API_URL?.trim() || 'http://localhost:8000';
+
       try {
-        const response = await fetch(`${apiBase}/simulate?lat=${lat}&lng=${lng}&magnitude=${magnitude}`);
+        setRegionInsightLoading(true);
+        setShowRegionPopup(true);
+
+        const response = await fetch(`${apiBase}/region-insight?lat=${lat}&lng=${lng}`);
+
+        if (!response.ok) {
+          throw new Error(`Region insight response not OK: ${response.status}`);
+        }
+
         const data = await response.json();
-        if (data.waveform) {
+        setRegionInsight(data);
+      } catch (error) {
+        console.error('Failed to fetch region insight:', error);
+        setRegionInsight({
+          regionName: 'Region Insight Unavailable',
+          soilSummary: 'Could not fetch region insight for this location.',
+          populationDensity: 'Unknown',
+          earthquakeHazards: ['ground shaking'],
+          recommendedAction: 'Try again or check backend logs.',
+        });
+      } finally {
+        setRegionInsightLoading(false);
+      }
+    },
+    []
+  );
+
+  const handleMapClick = useCallback(
+    async (lat: number, lng: number) => {
+      if (gameState === GAME_STATES.SETUP && !epicenter) {
+        placeEpicenter(lat, lng);
+        const apiBase = import.meta.env.VITE_SEISMIC_API_URL?.trim() || 'http://localhost:8000';
+
+        try {
+          const response = await fetch(`${apiBase}/simulate?lat=${lat}&lng=${lng}&magnitude=${magnitude}`);
+
+          if (!response.ok) throw new Error(`Backend response not OK: ${response.status}`);
+
+          const data = await response.json();
+
+          if (!data.waveform || data.waveform.length === 0) {
+            setMlData(null);
+            return;
+          }
+
           setMlData({
             waveform: data.waveform,
             max_amplitude: data.max_amplitude ?? 0.02,
@@ -201,57 +238,105 @@ export default function App() {
             risk_classes: data.risk_classes,
             confidence: data.confidence
           });
+
+        } catch (error) {
+          console.error('Failed to fetch ML data:', error);
+          setMlData(null);
         }
-      } catch (error) {
-        console.error('ML fetch failed', error);
+      } else if (selectedUnitType && (gameState === GAME_STATES.SETUP || gameState === GAME_STATES.PROPAGATING)) {
+        deployUnit(lat, lng);
       }
-    } else if (selectedUnitType && (gameState === GAME_STATES.SETUP || gameState === GAME_STATES.PROPAGATING)) {
-      deployUnit(lat, lng);
-    }
-  }, [gameState, epicenter, selectedUnitType, placeEpicenter, deployUnit, GAME_STATES, magnitude]);
+    },
+    [gameState, epicenter, selectedUnitType, placeEpicenter, deployUnit, GAME_STATES, magnitude]
+  );
 
   const handleStartScenario = async () => {
     ensureMusicPlaying();
-    setGameSubtype('SCENARIO');
     resetSimulation();
+    setMlData(null);
+    setRegionInsight(null);
+    setShowRegionPopup(false);
+    setGameSubtype('SCENARIO');
     setAppMode('GAME');
-    
-    const lat = 34.05 + (Math.random() - 0.5) * 0.3;
-    const lng = -118.25 + (Math.random() - 0.5) * 0.3;
-    const mag = Number((5.5 + Math.random() * 3).toFixed(1));
-    
+
+    const SOCAL_POINTS = [
+      { lat: 34.05, lng: -118.25 }, { lat: 32.72, lng: -117.16 },
+      { lat: 34.42, lng: -119.70 }, { lat: 34.10, lng: -117.30 },
+      { lat: 33.94, lng: -117.40 }, { lat: 34.28, lng: -118.44 },
+      { lat: 33.68, lng: -117.82 }, { lat: 34.95, lng: -120.44 },
+    ];
+
+    const base = SOCAL_POINTS[Math.floor(Math.random() * SOCAL_POINTS.length)];
+    const lat = base.lat + (Math.random() - 0.5) * 0.15;
+    const lng = base.lng + (Math.random() - 0.5) * 0.15;
+    const mag = Number((5 + Math.random() * 4).toFixed(1));
+
     placeEpicenter(lat, lng);
     setMagnitude(mag);
-    startSimulation();
+
+    const apiBase = import.meta.env.VITE_SEISMIC_API_URL?.trim() || 'http://localhost:8000';
+
+    try {
+      const response = await fetch(`${apiBase}/simulate?lat=${lat}&lng=${lng}&magnitude=${mag}`);
+      const data = await response.json();
+
+      if (!data.waveform || data.waveform.length === 0) {
+        setMlData(null);
+        return;
+      }
+
+      setMlData({
+        waveform: data.waveform,
+        max_amplitude: data.max_amplitude ?? 0.02,
+        pgv: data.adjusted_pgv ?? data.pgv,
+        risk_classes: data.risk_classes,
+        confidence: data.confidence
+      });
+
+      startSimulation();
+    } catch (err) {
+      console.error("Random simulation failed:", err);
+      setMlData(null);
+    }
   };
 
   const handleStartSandbox = () => {
     ensureMusicPlaying();
-    setGameSubtype('SANDBOX');
     resetSimulation();
     setMlData(null);
+    setRegionInsight(null);
+    setShowRegionPopup(false);
+    setGameSubtype('SANDBOX');
     setAppMode('GAME');
   };
 
   const handleReturnToMenu = () => {
     setGameSubtype(null);
     resetSimulation();
-    setAppMode('MENU');
+    setMlData(null);
+    setRegionInsight(null);
+    setShowRegionPopup(false);
     setShowResultsModal(false);
+    setAppMode('MENU');
   };
+
+  const handleViewSimulation = () => setShowResultsModal(false);
 
   const handleResetSimulation = () => {
     resetSimulation();
     setMlData(null);
+    setRegionInsight(null);
+    setShowRegionPopup(false);
     setShowResultsModal(false);
   };
 
-  // Render Landing Page and pass audio props
+  const showLiquefactionAlert = waveProgress > 0.5 && gameState === GAME_STATES.PROPAGATING;
+
   if (appMode === 'MENU') {
     return (
-      <LandingPage 
-        onStartScenario={handleStartScenario} 
-        onSandboxMode={handleStartSandbox} 
+      <LandingPage
+        onStartScenario={handleStartScenario}
+        onSandboxMode={handleStartSandbox}
         isMusicMuted={isMusicMuted}
         toggleMusic={toggleMusic}
         isSfxMuted={isSfxMuted}
@@ -262,18 +347,13 @@ export default function App() {
 
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-black text-white font-mono">
-        
-      {/* Global Mute Toggle is still here for in-game convenience if you want it, 
-          otherwise you can remove this block if you only want to control it via settings menu */}
+      
+      {/* Global Mute Toggle for convenience */}
       <button
         onClick={toggleMusic}
         className="pointer-events-auto absolute bottom-6 left-6 z-50 flex h-10 w-10 items-center justify-center border border-zinc-800 bg-black/80 text-zinc-400 backdrop-blur-md transition-all hover:border-cyan-500 hover:text-cyan-400"
       >
-        {isMusicMuted ? (
-          <VolumeX className="h-4 w-4" />
-        ) : (
-          <Volume2 className="h-4 w-4" />
-        )}
+        {isMusicMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
       </button>
 
       <MapboxContainer
@@ -310,53 +390,99 @@ export default function App() {
         <ResourceDock units={units} selectedUnitType={selectedUnitType} gameState={gameState} onSelectUnit={setSelectedUnitType} />
       </div>
 
-      {showRegionPopup && (
+      {showLiquefactionAlert && (
         <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="pointer-events-auto absolute right-85 top-24 z-40 w-80 border-l-2 border-cyan-500 bg-zinc-950/90 backdrop-blur-xl shadow-2xl"
+          initial={{ opacity: 0, y: -16 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="pointer-events-none absolute right-6 top-24 z-30 flex items-start gap-3 border border-red-500/40 bg-red-950/85 px-4 py-3 text-red-100 shadow-[0_0_20px_rgba(220,38,38,0.25)] backdrop-blur-md"
         >
-          <div className="p-4">
-            <div className="mb-4 flex items-start justify-between">
-              <div>
-                <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-cyan-400">Intelligence Feed</div>
-                <div className="mt-1 text-lg font-bold text-zinc-100 uppercase italic">
-                  {regionInsightLoading ? 'Analyzing...' : (regionInsight?.regionName || 'Sector Data')}
-                </div>
-              </div>
-              <button onClick={() => setShowRegionPopup(false)} className="text-zinc-500 hover:text-cyan-400">
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            {!regionInsightLoading && regionInsight && (
-              <div className="space-y-4 text-[12px]">
-                <section>
-                  <div className="text-[10px] font-bold text-cyan-500/70 uppercase">Lithology</div>
-                  <div className="text-zinc-300">{regionInsight.soilSummary}</div>
-                </section>
-                <div className="grid grid-cols-2 gap-4 border-y border-zinc-800 py-3">
-                  <div>
-                    <div className="text-[10px] font-bold text-cyan-500/70">DENSITY</div>
-                    <div className="text-zinc-100">{regionInsight.populationDensity}</div>
-                  </div>
-                  <div>
-                    <div className="text-[10px] font-bold text-cyan-500/70">RISK</div>
-                    <div className="text-zinc-100">{regionInsight.earthquakeHazards[0]}</div>
-                  </div>
-                </div>
-                <section className="bg-cyan-500/5 p-2 border border-cyan-500/10">
-                  <div className="text-[10px] font-bold text-cyan-400">ADVISORY</div>
-                  <div className="italic text-cyan-100/90">"{regionInsight.recommendedAction}"</div>
-                </section>
-              </div>
-            )}
+          <AlertTriangle className="mt-0.5 h-5 w-5 text-red-400" />
+          <div>
+            <div className="text-sm font-semibold uppercase tracking-[0.2em]">High Risk: Liquefaction Zone</div>
+            <div className="mt-1 text-xs text-red-200/80">Critical infrastructure at risk</div>
           </div>
         </motion.div>
       )}
 
+      {showRegionPopup && (
+        <div className="pointer-events-auto absolute left-6 bottom-70 z-40 w-[24rem] border border-green-400/40 bg-black/90 p-4 shadow-[0_0_20px_rgba(34,211,238,0.15)] backdrop-blur-md">
+          <div className="mb-3 flex items-start justify-between">
+            <div>
+              <div className="text-[10px] uppercase tracking-[0.24em] text-green-400/80">Region Analysis</div>
+              <div className="mt-1 text-lg font-semibold text-green-500">
+                {regionInsightLoading ? 'Loading...' : (regionInsight?.regionName ?? 'Region Insight')}
+              </div>
+            </div>
+            <button onClick={() => setShowRegionPopup(false)} className="text-zinc-400 transition-colors hover:text-white">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+
+          {regionInsightLoading ? (
+            <div className="text-sm text-zinc-300">Asking Gemini about this region...</div>
+          ) : regionInsight ? (
+            <div className="space-y-3 text-sm text-zinc-200">
+              <div>
+                <div className="mb-1 text-[10px] uppercase tracking-[0.22em] text-green-500/70">Soil</div>
+                <div>{regionInsight.soilSummary}</div>
+              </div>
+              <div>
+                <div className="mb-1 text-[10px] uppercase tracking-[0.22em] text-green-500/70">Population Density</div>
+                <div>{regionInsight.populationDensity}</div>
+              </div>
+              <div>
+                <div className="mb-1 text-[10px] uppercase tracking-[0.22em] text-green-500/70">Earthquake Hazards</div>
+                <ul className="list-disc pl-5 space-y-1">
+                  {regionInsight.earthquakeHazards.map((hazard, idx) => (
+                    <li key={`${hazard}-${idx}`}>{hazard}</li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <div className="mb-1 text-[10px] uppercase tracking-[0.22em] text-green-500/70">Recommended Action</div>
+                <div>{regionInsight.recommendedAction}</div>
+              </div>
+            </div>
+          ) : (
+            <div className="text-sm text-zinc-300">No region insight available.</div>
+          )}
+        </div>
+      )}
+
       {gameState === GAME_STATES.RESULTS && results && showResultsModal && (
-        <ResultsScreen results={results} onReset={handleReturnToMenu} onResetSimulation={handleResetSimulation} onViewSimulation={() => setShowResultsModal(false)} />
+        <ResultsScreen
+          results={results}
+          onReset={handleReturnToMenu}
+          onResetSimulation={handleResetSimulation}
+          onViewSimulation={handleViewSimulation}
+        />
+      )}
+
+      {gameState === GAME_STATES.RESULTS && results && !showResultsModal && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="pointer-events-auto absolute bottom-6 right-6 z-30 flex flex-col gap-2"
+        >
+          <button
+            onClick={() => setShowResultsModal(true)}
+            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold text-xs uppercase tracking-wider transition-all"
+          >
+            View Results
+          </button>
+          <button
+            onClick={handleResetSimulation}
+            className="px-4 py-2 bg-black border border-red-500/50 hover:border-red-500 text-red-500 font-semibold text-xs uppercase tracking-wider transition-all"
+          >
+            New Simulation
+          </button>
+          <button
+            onClick={handleReturnToMenu}
+            className="px-4 py-2 bg-black border border-red-500/50 hover:border-red-500 text-red-500 font-semibold text-xs uppercase tracking-wider transition-all"
+          >
+            Return to Menu
+          </button>
+        </motion.div>
       )}
     </div>
   );

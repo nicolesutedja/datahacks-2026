@@ -1,6 +1,6 @@
-# SeismicStabilize
+# TECHTonic
 
-**SeismicStabilize** is an interactive educational platform designed to simulate earthquake propagation and teach effective mitigation strategies. By combining real-time wave physics with tactical urban planning, the tool educates users on the critical importance of soil stabilization and structural shoring.
+**TECHTonic** is an interactive educational platform designed to simulate earthquake propagation and teach effective mitigation strategies. By combining real-time wave physics with tactical urban planning, the tool educates users on the critical importance of soil stabilization and structural shoring.
 
 This project is a tactical, educational gaming platform made by NJ Squared Team at DataHacks 2026.
 The tool is designed to teach users how to mitigate earthquake damage through real-time simulation, wave propagation analysis, and structural engineering tasks.

@@ -172,7 +172,7 @@ export const MissionBriefingModal = ({ onConfirm, onClose, isSfxMuted }: Mission
 
               <div style={{ flex: 1 }}>
                 <div style={{ color: '#ef4444', fontSize: '11px', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase' }}>
-                  Capt. R. Vasquez
+                  Capt. Arthur Shock
                 </div>
                 <div style={{ color: 'rgba(239,68,68,0.4)', fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: '2px' }}>
                   Seismic Response Command

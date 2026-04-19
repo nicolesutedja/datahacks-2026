@@ -126,7 +126,7 @@ export const LandingPage = ({
               {showAbout ? (
                 <div className="space-y-4">
                   <p className="text-base text-red-500 leading-relaxed" style={{ fontFamily: 'Rajdhani, sans-serif' }}>
-                    SeismicStabilize is an innovative educational platform dedicated to raising awareness
+                    TECHTonic is an innovative educational platform dedicated to raising awareness
                     about earthquake dynamics and prevention. By combining real-time seismic wave simulations
                     with practical urban planning strategies, we empower users to understand and apply
                     essential techniques like soil stabilization and structural shoring to reduce earthquake risks.
@@ -278,7 +278,7 @@ export const LandingPage = ({
             <motion.img
               src={logoImage}
               alt="Logo"
-              className="w-24 h-24 opacity-80"
+              className="w-30 h-30 opacity-80"
               style={{ filter: 'drop-shadow(0px 0px 12px rgba(220,38,38,0.4))' }}
               animate={{
                 filter: [
@@ -292,18 +292,18 @@ export const LandingPage = ({
           </motion.div>
 
           <h1
-            className="text-7xl font-black text-red-600 tracking-tighter"
+            className="text-9xl font-black text-red-600 tracking-tighter"
             style={{ fontFamily: 'Orbitron, sans-serif', textShadow: '0 0 15px rgba(220, 38, 38, 0.4)' }}
           >
             <motion.span
               animate={{ opacity: [1, 0.8, 1, 0.9, 1] }}
-              style={{ fontFamily: 'Inter, sans-serif' }}
+              style={{ fontFamily: 'Orbitron, sans-serif' }}
               transition={{ duration: 4, repeat: Infinity, ease: 'linear' }}
             >
-              SEISMIC
+              TECH
             </motion.span>
             <span className="text-red-500" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-              STABILIZE
+              Tonic
             </span>
           </h1>
 
