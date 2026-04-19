@@ -26,11 +26,9 @@ interface Results {
   predictionAccuracy: number;
   magnitude: number;
   unitsDeployed: number;
-  fundsRemaining: number;
-  budgetUsedPercent: number;
-  readinessScore: number;
-  coverageScore: number;
-  recommendations: string[];
+  expectedDamageIndex: number;
+  predictedSeverity: 'low' | 'moderate' | 'high' | 'severe';
+  modelReliability: number;
 }
 
 const TOTAL_BUDGET = 10000000;
@@ -42,7 +40,17 @@ const UNIT_COSTS = {
   hospital: 3000000,
 } as const;
 
-export const useGameManager = () => {
+interface ModelAssessment {
+  mean_pgv: number;
+  max_pgv: number;
+  high_risk_ratio: number;
+  extreme_risk_ratio: number;
+  expected_damage_index: number;
+  predicted_severity: 'low' | 'moderate' | 'high' | 'severe';
+  model_reliability: number;
+}
+
+export const useGameManager = (modelAssessment: ModelAssessment | null) => {
   const [gameState, setGameState] = useState<GameState>(GAME_STATES.SETUP);
   const [epicenter, setEpicenter] = useState<Position | null>(null);
   const [magnitude, setMagnitude] = useState(6.5);
@@ -79,89 +87,80 @@ export const useGameManager = () => {
   }, [gameState]);
 
   const calculateResults = useCallback(() => {
-    const ambulanceCount = units.filter((u) => u.type === 'ambulance').length;
-    const fireCount = units.filter((u) => u.type === 'fire').length;
-    const hospitalCount = units.filter((u) => u.type === 'hospital').length;
-    const uniqueTypes = new Set(units.map((u) => u.type)).size;
+    const deploymentRatio = Math.min(1, units.length / 5);
+    const typeDiversity = new Set(units.map((u) => u.type)).size / 3;
+  
+    const severityMultiplier =
+      modelAssessment?.predicted_severity === 'severe'
+        ? 1.2
+        : modelAssessment?.predicted_severity === 'high'
+        ? 1.0
+        : modelAssessment?.predicted_severity === 'moderate'
+        ? 0.8
+        : 0.6;
+  
+    const expectedDamageIndex = modelAssessment?.expected_damage_index ?? magnitude * 10;
 
-    const severityFactor = Math.max(0.45, Math.min(1.25, (magnitude - 4.5) / 3.2));
-    const deploymentScore = Math.min(100, Math.round((units.length / MAX_UNITS) * 55));
-    const mixScore = Math.min(
-      100,
-      ambulanceCount * 18 + fireCount * 18 + hospitalCount * 22 + uniqueTypes * 8
-    );
-
-    const coverageScore = Math.min(
-      100,
-      Math.round(deploymentScore * 0.55 + mixScore * 0.45)
-    );
-
-    const budgetUsedPercent = Math.round((spentBudget / TOTAL_BUDGET) * 100);
-    const budgetBalanceScore = Math.max(50, 100 - Math.abs(budgetUsedPercent - 70));
+    const highRiskRatio = modelAssessment?.high_risk_ratio ?? 0.3;
+    const extremeRiskRatio = modelAssessment?.extreme_risk_ratio ?? 0.1;
+    const modelReliability = Math.round((modelAssessment?.model_reliability ?? 0.72) * 100);
+  
     const readinessScore = Math.min(
       100,
-      Math.round(
-        (epicenter ? 28 : 0) +
-          Math.min(32, units.length * 8) +
-          Math.min(22, uniqueTypes * 7) +
-          Math.round(budgetBalanceScore * 0.18)
-      )
+      Math.round(35 + deploymentRatio * 40 + typeDiversity * 25)
     );
-
+  
     const resourceEfficiency = Math.min(
       100,
-      Math.round(coverageScore * 0.45 + readinessScore * 0.35 + budgetBalanceScore * 0.2)
+      Math.round(
+        25 +
+          deploymentRatio * 35 +
+          typeDiversity * 20 +
+          (1 - Math.min(1, expectedDamageIndex / 100)) * 20
+      )
     );
-
+  
     const predictionAccuracy = Math.min(
       100,
-      Math.round(62 + coverageScore * 0.16 + readinessScore * 0.18 - magnitude * 1.2)
+      Math.round(
+        modelReliability * (0.7 + 0.3 * (1 - extremeRiskRatio)) -
+        Math.max(0, expectedDamageIndex - 70) * 0.2
+      )
     );
-
-    const baseExposure = Math.round(18000 + magnitude * 6500);
-    const mitigationFactor = 0.18 + coverageScore / 160 + readinessScore / 220;
-    const livesSaved = Math.max(
-      0,
-      Math.round(baseExposure * severityFactor * Math.min(0.95, mitigationFactor))
-    );
-
-    const recommendations: string[] = [];
-
-    if (units.length < 3) {
-      recommendations.push('Deploy more assets before starting the wave phase.');
-    }
-    if (ambulanceCount === 0) {
-      recommendations.push('No medical response unit was deployed - add at least one ambulance.');
-    }
-    if (hospitalCount === 0 && magnitude >= 6.8) {
-      recommendations.push('Higher-magnitude events benefit from a field hospital for surge capacity.');
-    }
-    if (uniqueTypes < 2) {
-      recommendations.push('Diversify asset types to improve coverage and resilience.');
-    }
-    if (budgetUsedPercent < 35) {
-      recommendations.push('You finished with too much unused budget - convert more funds into readiness.');
-    }
-    if (budgetUsedPercent > 90) {
-      recommendations.push('Budget usage was too aggressive - leave reserve capacity for balance.');
-    }
-    if (recommendations.length === 0) {
-      recommendations.push('Strong deployment balance - your coverage and budget discipline were both solid.');
-    }
-
+  
+    const exposureBase = 18000 + magnitude * 5500;
+    const mitigationScore = 0.22 + deploymentRatio * 0.38 + typeDiversity * 0.22;
+    const riskPenalty =
+      1 -
+      Math.min(
+        0.55,
+        expectedDamageIndex / 250 +
+        highRiskRatio * 0.35 +
+        extremeRiskRatio * 0.5
+      );
+  
+      const livesSaved = Math.max(
+        0,
+        Math.round(
+          exposureBase *
+            severityMultiplier *
+            mitigationScore *
+            riskPenalty *
+            (0.6 + modelReliability / 200)
+        )
+      );
+  
     setResults({
       livesSaved,
       resourceEfficiency,
       predictionAccuracy,
       magnitude,
       unitsDeployed: units.length,
-      fundsRemaining: currentFunds,
-      budgetUsedPercent,
-      readinessScore,
-      coverageScore,
-      recommendations,
+      expectedDamageIndex: Math.round(expectedDamageIndex),
+      predictedSeverity: modelAssessment?.predicted_severity ?? 'moderate',
+      modelReliability,
     });
-  }, [currentFunds, epicenter, magnitude, spentBudget, units]);
+  }, [magnitude, modelAssessment, units]);
 
   const startSimulation = useCallback(() => {
     if (!epicenter) return;

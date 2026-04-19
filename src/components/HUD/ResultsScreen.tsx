@@ -18,11 +18,9 @@ interface Results {
   predictionAccuracy: number;
   magnitude: number;
   unitsDeployed: number;
-  fundsRemaining: number;
-  budgetUsedPercent: number;
-  readinessScore: number;
-  coverageScore: number;
-  recommendations: string[];
+  expectedDamageIndex: number;
+  predictedSeverity: 'low' | 'moderate' | 'high' | 'severe';
+  modelReliability: number;
 }
 
 interface ResultsScreenProps {
@@ -48,10 +46,8 @@ export const ResultsScreen = ({
   const getGrade = () => {
     const avgScore =
       (results.resourceEfficiency +
-        results.predictionAccuracy +
-        results.readinessScore +
-        results.coverageScore) /
-      4;
+      results.predictionAccuracy +
+      results.modelReliability) / 3
 
     if (avgScore >= 90) {
       return {
@@ -118,7 +114,7 @@ export const ResultsScreen = ({
                 </p>
                 <h2 className="mt-2 text-3xl font-bold">Post-Action Analysis</h2>
                 <p className="mt-2 text-sm text-zinc-400">
-                  Your deployment is now scored on readiness, coverage, and budget discipline.
+                  Your deployment is now scored on model reliability, response efficiency, and event severity alignment.
                 </p>
               </div>
 
@@ -156,19 +152,19 @@ export const ResultsScreen = ({
               <div className="rounded-2xl border border-red-900/30 bg-red-950/10 p-4">
                 <div className="mb-3 flex items-center gap-2 text-xs uppercase tracking-[0.22em] text-red-400">
                   <ShieldCheck size={14} />
-                  Mission Readiness
+                  Model Reliability
                 </div>
-                <div className="text-3xl font-bold">{results.readinessScore}%</div>
-                <div className="mt-1 text-sm text-zinc-400">Preparedness before propagation began</div>
+                <div className="text-3xl font-bold">{results.modelReliability}%</div>
+                <div className="mt-1 text-sm text-zinc-400">Confidence-adjusted trust in this simulation output</div>
               </div>
 
               <div className="rounded-2xl border border-red-900/30 bg-red-950/10 p-4">
                 <div className="mb-3 flex items-center gap-2 text-xs uppercase tracking-[0.22em] text-red-400">
                   <Target size={14} />
-                  Coverage Score
+                  Predicted Severity
                 </div>
-                <div className="text-3xl font-bold">{results.coverageScore}%</div>
-                <div className="mt-1 text-sm text-zinc-400">Deployment breadth and asset mix quality</div>
+                <div className="text-3xl font-bold uppercase">{results.predictedSeverity}</div>
+                <div className="mt-1 text-sm text-zinc-400">Model-classified event severity from the hazard output</div>
               </div>
 
               <div className="rounded-2xl border border-red-900/30 bg-red-950/10 p-4">
@@ -177,17 +173,19 @@ export const ResultsScreen = ({
                   Risk Alignment
                 </div>
                 <div className="text-3xl font-bold">{results.predictionAccuracy}%</div>
-                <div className="mt-1 text-sm text-zinc-400">How well your response matched event severity</div>
+                <div className="mt-1 text-sm text-zinc-400">Reliability-adjusted score for how well your response matched the modeled event</div>
               </div>
 
               <div className="rounded-2xl border border-red-900/30 bg-red-950/10 p-4">
                 <div className="mb-3 flex items-center gap-2 text-xs uppercase tracking-[0.22em] text-red-400">
                   <Wallet size={14} />
-                  Budget Summary
+                  Damage Summary
                 </div>
-                <div className="text-lg font-bold">{results.budgetUsedPercent}% used</div>
+                <div className="text-lg font-bold">
+                  Damage Index: {results.expectedDamageIndex}
+                </div>
                 <div className="mt-1 text-sm text-zinc-400">
-                  {formatMoney(results.fundsRemaining)} remaining
+                  Lower values indicate lighter modeled infrastructure impact
                 </div>
               </div>
             </div>
@@ -200,7 +198,7 @@ export const ResultsScreen = ({
               <div className="grid gap-3 text-sm text-zinc-300 sm:grid-cols-3">
                 <div>Magnitude <span className="font-semibold text-white">{results.magnitude.toFixed(1)}</span></div>
                 <div>Assets Deployed <span className="font-semibold text-white">{results.unitsDeployed}</span></div>
-                <div>Budget Used <span className="font-semibold text-white">{results.budgetUsedPercent}%</span></div>
+                <div>Damage Index <span className="font-semibold text-white">{results.expectedDamageIndex}</span></div>
               </div>
             </div>
           </div>
@@ -213,15 +211,20 @@ export const ResultsScreen = ({
               </div>
 
               <div className="space-y-3 text-sm text-zinc-300">
-                {results.recommendations.map((item, index) => (
-                  <div
-                    key={index}
-                    className="rounded-xl border border-red-900/25 bg-red-950/10 p-3"
-                  >
-                    <span className="mr-2 text-red-400">{'>'}</span>
-                    {item}
-                  </div>
-                ))}
+                <div className="rounded-xl border border-red-900/25 bg-red-950/10 p-3">
+                  <span className="mr-2 text-red-400">{'>'}</span>
+                  Predicted severity: {results.predictedSeverity.toUpperCase()}
+                </div>
+
+                <div className="rounded-xl border border-red-900/25 bg-red-950/10 p-3">
+                  <span className="mr-2 text-red-400">{'>'}</span>
+                  Model reliability: {results.modelReliability}%
+                </div>
+
+                <div className="rounded-xl border border-red-900/25 bg-red-950/10 p-3">
+                  <span className="mr-2 text-red-400">{'>'}</span>
+                  Response efficiency: {results.resourceEfficiency}%
+                </div>
               </div>
             </div>
 

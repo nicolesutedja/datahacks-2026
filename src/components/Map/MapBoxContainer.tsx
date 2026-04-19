@@ -366,7 +366,7 @@ const ensureSimulationLayers = (map: mapboxgl.Map) => {
           10,
           62,
         ],
-        'heatmap-opacity': 0.92,
+        'heatmap-opacity': 0.2,
         'heatmap-color': [
           'interpolate',
           ['linear'],

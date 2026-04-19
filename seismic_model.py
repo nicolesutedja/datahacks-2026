@@ -39,6 +39,11 @@ SOIL_MIN_STEP_DEGREES = 0.0028
 SOIL_MAX_POINTS_PER_AXIS = 120
 SOIL_LOCAL_FILL_RADIUS = 2
 SOIL_MIN_VALID_NEIGHBORS = 3
+SOIL_LOCAL_FILL_RADIUS = 2
+SOIL_MIN_VALID_NEIGHBORS = 3
+SOIL_MAX_POINTS_PER_AXIS = 140
+SOIL_MIN_STEP_DEGREES = 0.0012
+RECEIVER_RING_FRACTION = 0.72
 
 # =========================================================
 # CUSTOM RBF WRAPPER
@@ -274,23 +279,104 @@ def confidence_from_click(lat: float, lng: float) -> str:
         return "medium"
     return "low"
 
-
-def build_receiver_soil_samples(lat: float, lng: float, count: int):
+def confidence_score_from_click(lat: float, lng: float) -> float:
     """
-    Keeps the original fake receiver spread logic, but returns richer soil metadata.
+    Numeric confidence score in [0, 1] based on distance from training coverage.
+    Higher means the click is closer to known training samples.
+    """
+    length_km, width_km, _ = latlng_to_model_coords(lat, lng)
+    train_coords = source_locations[["length", "width"]].to_numpy(dtype=np.float32)
+    click_coord = np.array([length_km, width_km], dtype=np.float32)
+    dists = np.linalg.norm(train_coords - click_coord, axis=1)
+    min_dist = float(np.min(dists))
+
+    score = math.exp(-min_dist / 14.0)
+    return float(max(0.0, min(1.0, score)))
+
+
+def summarize_impact(adjusted_pgv: list[float], risk_classes: list[str], confidence_score: float):
+    """
+    Convert raw PGV/risk outputs into simple aggregate metrics for the frontend.
+    """
+    if not adjusted_pgv:
+        return {
+            "mean_pgv": 0.0,
+            "max_pgv": 0.0,
+            "high_risk_ratio": 0.0,
+            "extreme_risk_ratio": 0.0,
+            "expected_damage_index": 0.0,
+            "predicted_severity": "low",
+            "model_reliability": 0.0,
+        }
+
+    arr = np.array(adjusted_pgv, dtype=np.float32)
+    high_risk_ratio = float(sum(r in ("high", "extreme") for r in risk_classes) / len(risk_classes))
+    extreme_risk_ratio = float(sum(r == "extreme" for r in risk_classes) / len(risk_classes))
+
+    damage_index = float(
+        min(
+            100.0,
+            (
+                45.0 * (float(np.mean(arr)) / 0.08)
+                + 30.0 * (float(np.max(arr)) / 0.12)
+                + 15.0 * high_risk_ratio
+                + 10.0 * extreme_risk_ratio
+            )
+        )
+    )
+
+    calibrated_reliability = float(
+        max(0.0, min(1.0, 0.7 * confidence_score + 0.3 * (1.0 - extreme_risk_ratio * 0.5)))
+    )
+
+    if damage_index < 25:
+        severity = "low"
+    elif damage_index < 50:
+        severity = "moderate"
+    elif damage_index < 75:
+        severity = "high"
+    else:
+        severity = "severe"
+
+    return {
+        "mean_pgv": float(np.mean(arr)),
+        "max_pgv": float(np.max(arr)),
+        "high_risk_ratio": high_risk_ratio,
+        "extreme_risk_ratio": extreme_risk_ratio,
+        "expected_damage_index": damage_index,
+        "predicted_severity": severity,
+        "model_reliability": calibrated_reliability,
+    }
+
+
+def build_receiver_soil_samples(lat: float, lng: float, magnitude: float, count: int):
+    """
+    Place receiver samples around the epicenter in a ring so soil/risk outputs are
+    spatially distributed instead of marching along one diagonal line.
     """
     samples = []
+
+    radius_km = estimate_surface_wave_radius_km(magnitude) * RECEIVER_RING_FRACTION
+    radius_deg_lat = radius_km / 111.0
+    cos_lat = max(math.cos(math.radians(lat)), 0.2)
+    radius_deg_lng = radius_km / (111.0 * cos_lat)
+
     for i in range(count):
-        offset_lat = lat + (i * 0.002)
-        offset_lng = lng + (i * 0.002)
+        theta = (2.0 * math.pi * i) / max(count, 1)
+        offset_lat = lat + radius_deg_lat * math.sin(theta)
+        offset_lng = lng + radius_deg_lng * math.cos(theta)
+
         vs30 = get_vs30(offset_lat, offset_lng)
         soil_factor = vs30_to_soil_factor(vs30)
         soil_strength = vs30_to_soil_strength_score(vs30)
 
         samples.append(
             {
+                "receiver_id": i,
                 "lat": float(offset_lat),
                 "lng": float(offset_lng),
+                "angle_rad": float(theta),
+                "radius_km": float(radius_km),
                 "vs30": None if vs30 is None else float(vs30),
                 "soil_factor": float(soil_factor),
                 "soil_strength": None if soil_strength is None else float(soil_strength),
@@ -298,6 +384,7 @@ def build_receiver_soil_samples(lat: float, lng: float, count: int):
                 "site_class": vs30_to_site_class(vs30),
             }
         )
+
     return samples
 
 
@@ -538,7 +625,7 @@ def simulate(lat: float, lng: float, magnitude: float):
     site_classes = []
     risk_classes = []
 
-    receiver_soil = build_receiver_soil_samples(lat, lng, len(scaled_pgv))
+    receiver_soil = build_receiver_soil_samples(lat, lng, magnitude, len(scaled_pgv))
 
     for i, base_pgv in enumerate(scaled_pgv):
         soil_sample = receiver_soil[i]
@@ -553,6 +640,8 @@ def simulate(lat: float, lng: float, magnitude: float):
         risk_classes.append(pgv_to_risk_class(adjusted))
 
     confidence = confidence_from_click(lat, lng)
+    confidence_score = confidence_score_from_click(lat, lng)
+    impact_summary = summarize_impact(adjusted_pgv, risk_classes, confidence_score)
     max_amplitude = float(np.max(np.abs(scaled_wave)))
 
     liquefaction = [
@@ -588,6 +677,8 @@ def simulate(lat: float, lng: float, magnitude: float):
             "site_class": vs30_to_site_class(epicenter_vs30),
         },
         "confidence": confidence,
+        "confidence_score": float(confidence_score),
+        "impact_summary": impact_summary,
         "max_amplitude": max_amplitude,
         "pgv_heatmap": adjusted_pgv,
         "liquefaction": liquefaction,

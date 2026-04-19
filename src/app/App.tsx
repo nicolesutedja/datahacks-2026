@@ -16,8 +16,27 @@ interface SimulationOutput {
   waveform: number[][];
   max_amplitude: number;
   pgv: number[];
+  adjusted_pgv?: number[];
   risk_classes?: string[];
   confidence?: string;
+  confidence_score?: number;
+  soil_heatmap?: unknown;
+  epicenter_soil?: {
+    vs30?: number | null;
+    soil_strength?: number | null;
+    soil_strength_label?: string;
+    soil_factor?: number;
+    site_class?: string;
+  };
+  impact_summary?: {
+    mean_pgv: number;
+    max_pgv: number;
+    high_risk_ratio: number;
+    extreme_risk_ratio: number;
+    expected_damage_index: number;
+    predicted_severity: 'low' | 'moderate' | 'high' | 'severe';
+    model_reliability: number;
+  };
 }
 
 interface RegionInsight {
@@ -56,7 +75,18 @@ const isValidWaveform = (waveform: unknown): waveform is number[][] => {
   );
 };
 
+
 export default function App() {
+  // --- UI & Mode State ---
+  const [appMode, setAppMode] = useState<'MENU' | 'GAME'>('MENU');
+  const [gameSubtype, setGameSubtype] = useState<'SCENARIO' | 'SANDBOX' | null>(null);
+  const [mlData, setMlData] = useState<SimulationOutput | null>(null);
+  const [modelAssessment, setModelAssessment] = useState<SimulationOutput['impact_summary'] | null>(null);
+  const [showResultsModal, setShowResultsModal] = useState(false);
+  const [regionInsight, setRegionInsight] = useState<RegionInsight | null>(null);
+  const [showRegionPopup, setShowRegionPopup] = useState(false);
+  const [regionInsightLoading, setRegionInsightLoading] = useState(false);
+
   const {
     gameState,
     epicenter,
@@ -77,16 +107,7 @@ export default function App() {
     placeEpicenter,
     deployUnit,
     GAME_STATES,
-  } = useGameManager();
-
-  // --- UI & Mode State ---
-  const [appMode, setAppMode] = useState<'MENU' | 'GAME'>('MENU');
-  const [gameSubtype, setGameSubtype] = useState<'SCENARIO' | 'SANDBOX' | null>(null);
-  const [mlData, setMlData] = useState<SimulationOutput | null>(null);
-  const [showResultsModal, setShowResultsModal] = useState(false);
-  const [regionInsight, setRegionInsight] = useState<RegionInsight | null>(null);
-  const [showRegionPopup, setShowRegionPopup] = useState(false);
-  const [regionInsightLoading, setRegionInsightLoading] = useState(false);
+  } = useGameManager(modelAssessment);
 
   // --- Audio State ---
   const [isMusicMuted, setIsMusicMuted] = useState(false);
@@ -239,11 +260,15 @@ export default function App() {
             waveform: data.waveform,
             max_amplitude: data.max_amplitude ?? 0.02,
             pgv: data.adjusted_pgv ?? data.pgv,
+            adjusted_pgv: data.adjusted_pgv,
             risk_classes: data.risk_classes,
             confidence: data.confidence,
+            confidence_score: data.confidence_score,
             soil_heatmap: data.soil_heatmap,
             epicenter_soil: data.epicenter_soil,
+            impact_summary: data.impact_summary,
           });
+          setModelAssessment(data.impact_summary ?? null);
 
         } catch (error) {
           console.error('Failed to fetch ML data:', error);
@@ -260,81 +285,64 @@ export default function App() {
     ensureMusicPlaying();
     resetSimulation();
     setMlData(null);
+    setModelAssessment(null);
     setRegionInsight(null);
     setShowRegionPopup(false);
     setGameSubtype('SCENARIO');
     setAppMode('GAME');
-
+  
     const SOCAL_POINTS = [
-      { lat: 34.05, lng: -118.25 }, { lat: 32.72, lng: -117.16 },
-      { lat: 34.42, lng: -119.70 }, { lat: 34.10, lng: -117.30 },
-      { lat: 33.94, lng: -117.40 }, { lat: 34.28, lng: -118.44 },
-      { lat: 33.68, lng: -117.82 }, { lat: 34.95, lng: -120.44 },
+      { lat: 34.05, lng: -118.25 },
+      { lat: 32.72, lng: -117.16 },
+      { lat: 34.42, lng: -119.7 },
+      { lat: 34.1, lng: -117.3 },
+      { lat: 33.94, lng: -117.4 },
+      { lat: 34.28, lng: -118.44 },
+      { lat: 33.68, lng: -117.82 },
+      { lat: 34.95, lng: -120.44 },
     ];
-
+  
     const base = SOCAL_POINTS[Math.floor(Math.random() * SOCAL_POINTS.length)];
     const lat = base.lat + (Math.random() - 0.5) * 0.15;
     const lng = base.lng + (Math.random() - 0.5) * 0.15;
     const mag = Number((5 + Math.random() * 4).toFixed(1));
-
+  
     placeEpicenter(lat, lng);
     setMagnitude(mag);
-
+  
     const apiBase = import.meta.env.VITE_SEISMIC_API_URL?.trim() || 'http://localhost:8000';
-
+  
     try {
       const response = await fetch(`${apiBase}/simulate?lat=${lat}&lng=${lng}&magnitude=${mag}`);
-      const data = await response.json();
-
-      if (!data.waveform || data.waveform.length === 0) {
-        setMlData(null);
-        return;
-      }
-
-      setMlData({
-        waveform: data.waveform,
-        max_amplitude: data.max_amplitude ?? 0.02,
-        pgv: data.adjusted_pgv ?? data.pgv,
-        risk_classes: data.risk_classes,
-        confidence: data.confidence
-      });
-
+      if (!response.ok) throw new Error(`Backend response not OK: ${response.status}`);
   
-    const apiBase =
-      import.meta.env.VITE_SEISMIC_API_URL?.trim() || 'http://localhost:8000';
-
-    try {
-      const response = await fetch(
-        `${apiBase}/simulate?lat=${lat}&lng=${lng}&magnitude=${mag}`
-      );
-
       const data = await response.json();
-      console.log("ML RESPONSE:", data);
-
+  
       if (!data.waveform || data.waveform.length === 0) {
         setMlData(null);
+        setModelAssessment(null);
         return;
       }
-
+  
       setMlData({
         waveform: data.waveform,
         max_amplitude: data.max_amplitude ?? 0.02,
         pgv: data.adjusted_pgv ?? data.pgv,
+        adjusted_pgv: data.adjusted_pgv,
         risk_classes: data.risk_classes,
         confidence: data.confidence,
+        confidence_score: data.confidence_score,
         soil_heatmap: data.soil_heatmap,
         epicenter_soil: data.epicenter_soil,
+        impact_summary: data.impact_summary,
       });
-
+  
+      setModelAssessment(data.impact_summary ?? null);
       startSimulation();
     } catch (err) {
-      console.error("Random simulation failed:", err);
+      console.error('Random simulation failed:', err);
       setMlData(null);
-    }
-
-    } catch (err) {
-      console.error("Random simulation failed:", err);
-      setMlData(null);
+      setModelAssessment(null);
     }
   };
 
@@ -346,6 +354,7 @@ export default function App() {
     setShowRegionPopup(false);
     setGameSubtype('SANDBOX');
     setAppMode('GAME');
+    setModelAssessment(null);
   };
 
   const handleReturnToMenu = () => {
@@ -356,6 +365,7 @@ export default function App() {
     setShowRegionPopup(false);
     setShowResultsModal(false);
     setAppMode('MENU');
+    setModelAssessment(null);
   };
 
   const handleViewSimulation = () => setShowResultsModal(false);
@@ -366,6 +376,7 @@ export default function App() {
     setRegionInsight(null);
     setShowRegionPopup(false);
     setShowResultsModal(false);
+    setModelAssessment(null);
   };
 
   const showLiquefactionAlert = waveProgress > 0.5 && gameState === GAME_STATES.PROPAGATING;
