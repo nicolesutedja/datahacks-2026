@@ -4,12 +4,31 @@ import { SeismicBackground } from './SeismicBackground';
 import { PulseButton } from './PulseButton';
 import { MissionBriefingModal } from './MissionBriefing';
 import logoImage from '../ui/logo.png';
-import { X, Settings, Info, Activity, ShieldCheck } from 'lucide-react';
+import { X, Settings, Info, Activity, ShieldCheck, Mouse } from 'lucide-react';
 
 interface LandingPageProps {
   onStartScenario: () => void;
   onSandboxMode: () => void;
 }
+
+const CONTROLS = [
+  {
+    keys: ['Ctrl', 'Click'],
+    action: 'Open Gemini sector intel popup',
+  },
+  {
+    keys: ['Right Click'],
+    action: 'Open Gemini sector intel popup',
+  },
+  {
+    keys: ['Ctrl', 'Click + Hold'],
+    action: 'Rotate & tilt map angle',
+  },
+  {
+    keys: ['Right Click + Hold'],
+    action: 'Rotate & tilt map angle',
+  },
+];
 
 export const LandingPage = ({ onStartScenario, onSandboxMode }: LandingPageProps) => {
   const [showAbout, setShowAbout] = useState(false);
@@ -47,10 +66,8 @@ export const LandingPage = ({ onStartScenario, onSandboxMode }: LandingPageProps
     <div className="size-full relative overflow-hidden bg-slate-950 font-mono">
       <SeismicBackground />
 
-      {/* Scanline overlay */}
       <div className="pointer-events-none absolute inset-0 z-50 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.05),rgba(0,255,0,0.02),rgba(0,0,255,0.05))] bg-[length:100%_4px,3px_100%] opacity-20 mix-blend-overlay" />
 
-      {/* Mission Briefing Modal */}
       <AnimatePresence>
         {showBriefing && (
           <MissionBriefingModal
@@ -77,6 +94,7 @@ export const LandingPage = ({ onStartScenario, onSandboxMode }: LandingPageProps
               exit={{ scale: 0.9, opacity: 0 }}
               className="w-[600px] bg-black border border-red-600 p-6 text-white shadow-[0_0_30px_rgba(220,38,38,0.2)]"
             >
+              {/* Modal header */}
               <div className="flex justify-between items-center mb-6 border-b border-red-900/50 pb-4">
                 <h2
                   className="text-2xl font-bold text-red-500 flex items-center gap-3"
@@ -95,19 +113,13 @@ export const LandingPage = ({ onStartScenario, onSandboxMode }: LandingPageProps
 
               {showAbout ? (
                 <div className="space-y-4">
-                  <p
-                    className="text-base text-red-500 leading-relaxed"
-                    style={{ fontFamily: 'Rajdhani, sans-serif' }}
-                  >
+                  <p className="text-base text-red-500 leading-relaxed" style={{ fontFamily: 'Rajdhani, sans-serif' }}>
                     SeismicStabilize is an innovative educational platform dedicated to raising awareness
                     about earthquake dynamics and prevention. By combining real-time seismic wave simulations
                     with practical urban planning strategies, we empower users to understand and apply
                     essential techniques like soil stabilization and structural shoring to reduce earthquake risks.
                   </p>
-                  <p
-                    className="text-base text-red-500 leading-relaxed"
-                    style={{ fontFamily: 'Rajdhani, sans-serif' }}
-                  >
+                  <p className="text-base text-red-500 leading-relaxed" style={{ fontFamily: 'Rajdhani, sans-serif' }}>
                     This project is a tactical, educational gaming platform built by the NJ Squared Team at
                     DataHacks 2026. It is designed to teach users how to mitigate earthquake damage through
                     real-time simulation, wave propagation analysis, and structural engineering decision-making tasks.
@@ -120,8 +132,10 @@ export const LandingPage = ({ onStartScenario, onSandboxMode }: LandingPageProps
                   </div>
                 </div>
               ) : (
-                <div className="space-y-8">
-                  <div className="flex justify-between items-center">
+                <div className="space-y-6">
+
+                  {/* Audio */}
+                  <div className="flex justify-between items-center pb-5 border-b border-red-900/20">
                     <span
                       className="text-sm uppercase tracking-wider text-red-500"
                       style={{ fontFamily: 'Orbitron, sans-serif' }}
@@ -130,7 +144,7 @@ export const LandingPage = ({ onStartScenario, onSandboxMode }: LandingPageProps
                     </span>
                     <button
                       onClick={() => setSoundOn(!soundOn)}
-                      className={`px-4 py-2 text-xs font-bold ${
+                      className={`px-4 py-2 text-xs font-bold transition-colors ${
                         soundOn
                           ? 'bg-black text-red-500 border border-red-500'
                           : 'bg-red-500 text-black border border-red-500'
@@ -139,6 +153,54 @@ export const LandingPage = ({ onStartScenario, onSandboxMode }: LandingPageProps
                       {soundOn ? 'ACTIVE' : 'MUTED'}
                     </button>
                   </div>
+
+                  {/* Controls */}
+                  <div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <Mouse className="w-3.5 h-3.5 text-red-500/50" />
+                      <span
+                        className="text-[10px] uppercase tracking-widest text-red-500/50 font-bold"
+                        style={{ fontFamily: 'Orbitron, sans-serif' }}
+                      >
+                        Map Controls
+                      </span>
+                    </div>
+
+                    <div className="space-y-2">
+                      {CONTROLS.map((ctrl, i) => (
+                        <div
+                          key={i}
+                          className="flex items-center justify-between px-3 py-2.5 border border-red-900/20 bg-red-950/10 hover:border-red-900/40 transition-colors"
+                        >
+                          {/* Key badges */}
+                          <div className="flex items-center gap-1.5">
+                            {ctrl.keys.map((k, ki) => (
+                              <span key={ki} className="flex items-center gap-1.5">
+                                <kbd
+                                  className="px-2 py-0.5 bg-black border border-red-900/50 text-red-400 text-[9px] font-bold tracking-wider uppercase"
+                                  style={{ fontFamily: 'Orbitron, sans-serif' }}
+                                >
+                                  {k}
+                                </kbd>
+                                {ki < ctrl.keys.length - 1 && (
+                                  <span className="text-red-900/50 text-[10px]">+</span>
+                                )}
+                              </span>
+                            ))}
+                          </div>
+
+                          {/* Action label */}
+                          <span
+                            className="text-[10px] text-red-400/50 tracking-wider uppercase ml-4 text-right"
+                            style={{ fontFamily: 'Rajdhani, sans-serif' }}
+                          >
+                            {ctrl.action}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
                 </div>
               )}
 
@@ -154,14 +216,13 @@ export const LandingPage = ({ onStartScenario, onSandboxMode }: LandingPageProps
         )}
       </AnimatePresence>
 
-      {/* Main interface */}
+      {/* Main UI */}
       <motion.div
         variants={containerVariants}
         initial="hidden"
         animate="visible"
         className="relative z-10 size-full flex flex-col items-center justify-center gap-12 px-8 h-screen pointer-events-none"
       >
-        {/* Title */}
         <motion.div variants={itemVariants} className="text-center mb-4">
           <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
@@ -187,10 +248,7 @@ export const LandingPage = ({ onStartScenario, onSandboxMode }: LandingPageProps
 
           <h1
             className="text-7xl font-black text-red-600 tracking-tighter"
-            style={{
-              fontFamily: 'Orbitron, sans-serif',
-              textShadow: '0 0 15px rgba(220, 38, 38, 0.4)',
-            }}
+            style={{ fontFamily: 'Orbitron, sans-serif', textShadow: '0 0 15px rgba(220, 38, 38, 0.4)' }}
           >
             <motion.span
               animate={{ opacity: [1, 0.8, 1, 0.9, 1] }}
@@ -209,15 +267,12 @@ export const LandingPage = ({ onStartScenario, onSandboxMode }: LandingPageProps
           </p>
         </motion.div>
 
-        {/* Primary actions */}
         <motion.div variants={itemVariants} className="flex items-center gap-6 pointer-events-auto">
           <motion.div {...shake}>
-            {/* Game Mode now opens briefing first */}
             <PulseButton variant="primary" onClick={() => setShowBriefing(true)}>
               <span style={{ fontFamily: 'Orbitron, sans-serif' }}>Game Mode</span>
             </PulseButton>
           </motion.div>
-
           <motion.div {...shake}>
             <PulseButton variant="secondary" onClick={onSandboxMode}>
               <span style={{ fontFamily: 'Orbitron, sans-serif' }}>Sandbox</span>
@@ -225,7 +280,6 @@ export const LandingPage = ({ onStartScenario, onSandboxMode }: LandingPageProps
           </motion.div>
         </motion.div>
 
-        {/* Utility actions */}
         <motion.div variants={itemVariants} className="flex gap-6 pointer-events-auto">
           <PulseButton variant="tertiary" onClick={() => setShowSettings(true)}>
             <span style={{ fontFamily: 'Orbitron, sans-serif' }}>Settings</span>
@@ -235,7 +289,6 @@ export const LandingPage = ({ onStartScenario, onSandboxMode }: LandingPageProps
           </PulseButton>
         </motion.div>
 
-        {/* Status bar */}
         <motion.div
           variants={itemVariants}
           className="absolute bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-3 text-red-900/40 text-[10px] tracking-widest"
