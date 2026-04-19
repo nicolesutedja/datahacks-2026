@@ -89,11 +89,21 @@ export const useGameManager = () => {
 
   const startSimulation = useCallback(() => {
     if (!epicenter) return;
+  
     setGameState(GAME_STATES.PROPAGATING);
     setWaveProgress(0);
-    setCountdown(15);
-  }, [epicenter]);
+  
+    // 🔥 magnitude-dependent duration
+    const duration =
+      magnitude < 5 ? 10 :
+      magnitude < 6 ? 12 :
+      magnitude < 7 ? 15 :
+      magnitude < 8 ? 18 : 22;
+  
+    setCountdown(duration);
+  }, [epicenter, magnitude]);
 
+  
   const resetSimulation = useCallback(() => {
     setGameState(GAME_STATES.SETUP);
     setEpicenter(null);

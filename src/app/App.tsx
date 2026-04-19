@@ -106,7 +106,9 @@ useEffect(() => {
 
   const handleMapClick = useCallback(
     async (lat: number, lng: number) => {
+      if (appMode === 'GAME') return;
       if (gameState === GAME_STATES.SETUP && !epicenter) {
+        
         placeEpicenter(lat, lng);
 
         const apiBase =
@@ -162,11 +164,62 @@ useEffect(() => {
     ]
   );
 
-  const handleStartScenario = () => {
+  const handleStartScenario = async () => {
     resetSimulation();
-    setMagnitude(6.8);
     setMlData(null);
     setAppMode('GAME');
+  
+    // 🎲 Random SoCal bounds
+    const lat = 32.5 + Math.random() * (34.8 - 32.5);
+    const lng = -118.8 + Math.random() * (-116.5 - (-118.8));
+  
+    // 🎲 Realistic magnitude distribution
+    const r = Math.random();
+    let mag;
+    if (r < 0.6) mag = 4.5 + Math.random();
+    else if (r < 0.85) mag = 5.5 + Math.random();
+    else if (r < 0.97) mag = 6.5 + Math.random();
+    else mag = 7.5 + Math.random() * 1.5;
+  
+    mag = Number(mag.toFixed(1));
+  
+    console.log("🎲 RANDOM EQ:", { lat, lng, mag });
+  
+    // 👇 Set game state
+    placeEpicenter(lat, lng);
+    setMagnitude(mag);
+  
+    // 👇 CALL ML (same logic as map click)
+    const apiBase =
+      import.meta.env.VITE_SEISMIC_API_URL?.trim() || 'http://localhost:8000';
+  
+    try {
+      const response = await fetch(
+        `${apiBase}/simulate?lat=${lat}&lng=${lng}&magnitude=${mag}`
+      );
+  
+      const data = await response.json();
+      console.log("ML RESPONSE:", data);
+  
+      if (!data.waveform || data.waveform.length === 0) {
+        setMlData(null);
+        return;
+      }
+  
+      setMlData({
+        waveform: data.waveform,
+        max_amplitude: data.max_amplitude ?? 0.02,
+        pgv: data.adjusted_pgv ?? data.pgv,
+        risk_classes: data.risk_classes,
+        confidence: data.confidence
+      });
+      
+      startSimulation();
+  
+    } catch (err) {
+      console.error("Random simulation failed:", err);
+      setMlData(null);
+    }
   };
 
   const handleStartSandbox = () => {
@@ -230,7 +283,7 @@ useEffect(() => {
         magnitude={magnitude}
         panicMode={gameState === GAME_STATES.PROPAGATING}
         epicenter={epicenter}
-        onMagnitudeChange={setMagnitude}
+        onMagnitudeChange={appMode === 'GAME' ? undefined : setMagnitude}
         onPanicModeToggle={() => {}}
         onStart={startSimulation}
         onReset={handleResetSimulation}
