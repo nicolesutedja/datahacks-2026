@@ -270,24 +270,6 @@ useEffect(() => {
         />
       </div>
 
-      {showLiquefactionAlert && (
-        <motion.div
-          initial={{ opacity: 0, y: -16 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="pointer-events-none absolute right-6 top-24 z-30 flex items-start gap-3 border border-red-500/40 bg-red-950/85 px-4 py-3 text-red-100 shadow-[0_0_20px_rgba(220,38,38,0.25)] backdrop-blur-md"
-        >
-          <AlertTriangle className="mt-0.5 h-5 w-5 text-red-400" />
-          <div>
-            <div className="text-sm font-semibold uppercase tracking-[0.2em]">
-              High Risk: Liquefaction Zone
-            </div>
-            <div className="mt-1 text-xs text-red-200/80">
-              Critical infrastructure at risk
-            </div>
-          </div>
-        </motion.div>
-      )}
-
       {gameState === GAME_STATES.RESULTS && results && showResultsModal && (
         <ResultsScreen
           results={results}
