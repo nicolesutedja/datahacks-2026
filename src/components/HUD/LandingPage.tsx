@@ -66,10 +66,11 @@ export const LandingPage = ({ onStartScenario, onSandboxMode }: LandingPageProps
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="w-[600px] bg-slate-900 border border-red-600 p-6 text-white shadow-[0_0_30px_rgba(220,38,38,0.2)]"
+              className="w-[600px] bg-black border border-red-600 p-6 text-white shadow-[0_0_30px_rgba(220,38,38,0.2)]"
             >
               <div className="flex justify-between items-center mb-6 border-b border-red-900/50 pb-4">
-                <h2 className="text-2xl font-bold text-red-500 flex items-center gap-3">
+                <h2 className="text-2xl font-bold text-red-500 flex items-center gap-3"
+               style={{ fontFamily: 'Orbitron, sans-serif' }}   >
                   {showSettings ? <Settings className="w-5 h-5" /> : <Info className="w-5 h-5" />}
                   {showSettings ? 'SETTINGS' : 'ABOUT SYSTEM'}
                 </h2>
@@ -80,26 +81,52 @@ export const LandingPage = ({ onStartScenario, onSandboxMode }: LandingPageProps
 
               {showAbout ? (
                 <div className="space-y-4">
-                  <p className="text-sm text-white/70 leading-relaxed uppercase">
-                    Real-time earthquake simulation utilizing high-fidelity wave propagation models, 
-                    structural damage analysis, and tactical emergency response deployment.
+                  <p className="text-base text-red-500 leading-relaxed"
+                  style={{ fontFamily: 'Rajdhani, sans-serif' }}   >
+                   SeismicStabilize is an innovative educational platform dedicated to raising awareness 
+                   about earthquake dynamics and prevention. By combining real-time seismic wave simulations with practical urban 
+                  planning strategies, we empower users to understand and apply essential techniques like soil stabilization and 
+                  structural shoring to reduce earthquake risks. Our mission is to foster resilient communities through interactive learning and informed decision-making.
                   </p>
-                  <div className="flex items-center gap-2 text-[10px] text-red-900 font-bold tracking-widest">
+                   <p
+
+      className="text-base text-red-500 leading-relaxed"
+
+      style={{ fontFamily: 'Rajdhani, sans-serif' }}
+    >
+
+      This project is a tactical, educational gaming platform built by the NJ Squared
+
+      Team at DataHacks 2026. It is designed to teach users how to mitigate earthquake
+
+      damage through real-time simulation, wave propagation analysis, and structural
+
+      engineering decision-making tasks.
+
+    </p>
+                  <div className="flex items-center gap-2 text-[10px] text-red-900 font-bold tracking-widest"
+                  style={{ fontFamily: 'Orbitron, sans-serif' }}
+                  >
                     <ShieldCheck className="w-4 h-4" /> SECURE TERMINAL ACCESS GRANTED
                   </div>
                 </div>
               ) : (
                 <div className="space-y-8">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm uppercase tracking-wider">Audio Feedback</span>
-                    <button onClick={() => setSoundOn(!soundOn)} className={`px-4 py-2 text-xs font-bold ${soundOn ? 'bg-red-600 text-black' : 'border border-red-600 text-red-600'}`}>
+                    <span className="text-sm uppercase tracking-wider text-red-500"
+                    style={{ fontFamily: 'Orbitron, sans-serif' }}   >
+                       Audio Feedback  </span>
+                    <button onClick={() => setSoundOn(!soundOn)} className={`px-4 py-2 text-xs font-bold ${soundOn ? 'bg-black text-red-500 border border-red-500'     // <-- CHANGED
+
+      : 'bg-red-500 text-black border border-red-500'}`}>
                       {soundOn ? 'ACTIVE' : 'MUTED'}
                     </button>
                   </div>
                 </div>
               )}
 
-              <button onClick={() => { setShowAbout(false); setShowSettings(false); }} className="mt-8 px-6 py-2 bg-red-600 text-black font-bold uppercase tracking-widest text-xs hover:bg-red-500 transition-colors w-full">
+              <button onClick={() => { setShowAbout(false); setShowSettings(false); }} className="mt-8 px-6 py-2 bg-black text-red-500 font-bold uppercase tracking-widest text-xs border border-red-500 hover:bg-red-500 hover:text-black transition-colors w-full"
+                  style={{ fontFamily: 'Orbitron, sans-serif' }}   >
                 Close Terminal
               </button>
             </motion.div>

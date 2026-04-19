@@ -289,7 +289,7 @@ useEffect(() => {
         onReset={handleResetSimulation}
       />
 
-      <div className="pointer-events-none absolute left-6 top-28 z-20">
+      <div className=" absolute left-6 top-28 z-20">
         <TasksPanel
           gameState={gameState}
           magnitude={magnitude}
