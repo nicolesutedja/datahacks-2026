@@ -3,28 +3,20 @@ import {
   BarChart3,
   Users,
   Gauge,
-  Target,
   RotateCcw,
   TrendingUp,
-  Award,
   Terminal,
   Wallet,
-  ShieldCheck,
+  Activity,
+  Zap,
+  Clock,
+  Home,
+  Building2,
+  AlertTriangle
 } from 'lucide-react';
 
-interface Results {
-  livesSaved: number;
-  resourceEfficiency: number;
-  predictionAccuracy: number;
-  magnitude: number;
-  unitsDeployed: number;
-  expectedDamageIndex: number;
-  predictedSeverity: 'low' | 'moderate' | 'high' | 'severe';
-  modelReliability: number;
-}
-
 interface ResultsScreenProps {
-  results: Results;
+  results: any; // Using any here to bypass strict typing for the snippet, but it matches the updated Results interface
   onReset: () => void;
   onResetSimulation?: () => void;
   onViewSimulation?: () => void;
@@ -36,203 +28,142 @@ export const ResultsScreen = ({
   onResetSimulation,
   onViewSimulation,
 }: ResultsScreenProps) => {
-  const formatMoney = (amount: number) =>
-    new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      maximumFractionDigits: 0,
-    }).format(amount);
+
+  const TOTAL_POPULATION = 150000;
+  const survivalRate = (results.livesSaved / TOTAL_POPULATION) * 100;
 
   const getGrade = () => {
-    const avgScore =
-      (results.resourceEfficiency +
-      results.predictionAccuracy +
-      results.modelReliability) / 3
-
-    if (avgScore >= 90) {
-      return {
-        letter: 'S',
-        color: 'text-white shadow-white',
-        border: 'border-white',
-        bg: 'bg-white/10',
-        desc: 'MISSION EXCEEDED',
-      };
-    }
-    if (avgScore >= 80) {
-      return {
-        letter: 'A',
-        color: 'text-red-400',
-        border: 'border-red-400',
-        bg: 'bg-red-400/10',
-        desc: 'OUTSTANDING',
-      };
-    }
-    if (avgScore >= 70) {
-      return {
-        letter: 'B',
-        color: 'text-amber-400',
-        border: 'border-amber-400',
-        bg: 'bg-amber-400/10',
-        desc: 'STABLE RESPONSE',
-      };
-    }
-    if (avgScore >= 60) {
-      return {
-        letter: 'C',
-        color: 'text-orange-500',
-        border: 'border-orange-500',
-        bg: 'bg-orange-500/10',
-        desc: 'PARTIAL CONTAINMENT',
-      };
-    }
-    return {
-      letter: 'D',
-      color: 'text-red-800',
-      border: 'border-red-900',
-      bg: 'bg-red-950/30',
-      desc: 'CRITICAL FAILURE',
-    };
+    if (survivalRate >= 90) return { letter: 'S', color: 'text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.8)]', border: 'border-white', bg: 'bg-white/10', desc: 'MISSION EXCEEDED' };
+    if (survivalRate >= 80) return { letter: 'A', color: 'text-red-400 drop-shadow-[0_0_15px_rgba(248,113,113,0.8)]', border: 'border-red-400', bg: 'bg-red-400/10', desc: 'OUTSTANDING' };
+    if (survivalRate >= 65) return { letter: 'B', color: 'text-amber-500 drop-shadow-[0_0_15px_rgba(245,158,11,0.8)]', border: 'border-amber-500', bg: 'bg-amber-500/10', desc: 'STABLE RESPONSE' };
+    if (survivalRate >= 45) return { letter: 'C', color: 'text-orange-600 drop-shadow-[0_0_15px_rgba(234,88,12,0.8)]', border: 'border-orange-600', bg: 'bg-orange-600/10', desc: 'HEAVY CASUALTIES' };
+    return { letter: 'D', color: 'text-red-800 drop-shadow-[0_0_10px_rgba(153,27,27,0.8)]', border: 'border-red-900', bg: 'bg-red-950/30', desc: 'CRITICAL FAILURE' };
   };
 
   const grade = getGrade();
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 px-4 backdrop-blur-md font-mono">
       <motion.div
         initial={{ opacity: 0, scale: 0.96, y: 16 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        className="relative max-h-[90vh] w-full max-w-6xl overflow-hidden rounded-3xl border border-red-900/50 bg-black/95 text-white shadow-2xl"
+        className="relative max-h-[90vh] w-full max-w-6xl overflow-hidden rounded-sm border border-red-900/50 bg-black shadow-[0_0_50px_rgba(220,38,38,0.15)] overflow-y-auto"
       >
-        <div className="pointer-events-none absolute inset-0 opacity-10 [background-image:linear-gradient(to_bottom,transparent_50%,rgba(255,255,255,0.08)_50%)] [background-size:100%_6px]" />
+        <div className="pointer-events-none absolute inset-0 z-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_4px,3px_100%] opacity-20 mix-blend-overlay" />
 
-        <div className="grid gap-0 lg:grid-cols-[1.2fr_1fr]">
-          <div className="border-b border-red-900/30 p-6 lg:border-b-0 lg:border-r">
+        <div className="grid gap-0 lg:grid-cols-[1.5fr_1fr] relative z-10">
+          
+          {/* Left Column: Dense Data Grid */}
+          <div className="border-b border-red-900/30 p-6 lg:border-b-0 lg:border-r bg-black/80">
             <div className="mb-6 flex items-start justify-between gap-4">
               <div>
-                <p className="text-xs uppercase tracking-[0.28em] text-red-400/70">
+                <p className="text-xs uppercase tracking-[0.28em] text-red-500/70 flex items-center gap-2">
+                  <Activity className="w-4 h-4 text-red-500 animate-pulse" />
                   Simulation Complete
                 </p>
-                <h2 className="mt-2 text-3xl font-bold">Post-Action Analysis</h2>
-                <p className="mt-2 text-sm text-zinc-400">
-                  Your deployment is now scored on model reliability, response efficiency, and event severity alignment.
-                </p>
+                <h2 className="mt-2 text-3xl font-black text-red-500 uppercase tracking-widest">Post-Action Analysis</h2>
               </div>
 
-              <div
-                className={`flex h-24 w-24 flex-col items-center justify-center rounded-2xl border ${grade.border} ${grade.bg}`}
-              >
+              <div className={`flex h-20 w-20 flex-col items-center justify-center rounded-sm border ${grade.border} ${grade.bg}`}>
                 <span className={`text-4xl font-black ${grade.color}`}>{grade.letter}</span>
-                <span className="mt-1 text-[10px] uppercase tracking-[0.22em] text-zinc-300">
-                  {grade.desc}
-                </span>
               </div>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              <div className="rounded-2xl border border-red-900/30 bg-red-950/10 p-4">
-                <div className="mb-3 flex items-center gap-2 text-xs uppercase tracking-[0.22em] text-red-400">
-                  <Users size={14} />
-                  Primary Metric
+            {/* Core Metrics */}
+            <div className="grid gap-4 sm:grid-cols-2 mb-6">
+              <div className="border border-red-900/30 bg-red-950/10 p-4 relative group">
+                <div className="absolute top-0 left-0 w-1 h-full bg-red-600" />
+                <div className="mb-2 flex items-center justify-between text-xs uppercase tracking-[0.22em] text-red-500">
+                  <span className="flex items-center gap-2"><Users size={14} /> Survival Rate</span>
+                  <span className="text-red-500/50">Metric Alpha</span>
                 </div>
-                <div className="text-sm text-zinc-400">Lives Saved</div>
-                <div className="mt-1 text-3xl font-bold text-white">
-                  {results.livesSaved.toLocaleString()}
+                <div className="text-3xl font-bold text-white tracking-wider">{survivalRate.toFixed(1)}%</div>
+                <div className="mt-1 text-[10px] uppercase text-red-500/50 tracking-widest">
+                  {results.livesSaved.toLocaleString()} / {TOTAL_POPULATION.toLocaleString()} Saved
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-red-900/30 bg-red-950/10 p-4">
-                <div className="mb-3 flex items-center gap-2 text-xs uppercase tracking-[0.22em] text-red-400">
-                  <Gauge size={14} />
-                  Asset Efficiency
+              <div className="border border-red-900/30 bg-red-950/10 p-4">
+                <div className="mb-2 flex items-center justify-between text-xs uppercase tracking-[0.22em] text-red-500">
+                  <span className="flex items-center gap-2"><Gauge size={14} /> Asset Efficiency</span>
+                  <span className="text-red-500/50">Metric Beta</span>
                 </div>
-                <div className="text-3xl font-bold">{results.resourceEfficiency}%</div>
-                <div className="mt-1 text-sm text-zinc-400">How effectively your spend translated into response value</div>
-              </div>
-
-              <div className="rounded-2xl border border-red-900/30 bg-red-950/10 p-4">
-                <div className="mb-3 flex items-center gap-2 text-xs uppercase tracking-[0.22em] text-red-400">
-                  <ShieldCheck size={14} />
-                  Model Reliability
-                </div>
-                <div className="text-3xl font-bold">{results.modelReliability}%</div>
-                <div className="mt-1 text-sm text-zinc-400">Confidence-adjusted trust in this simulation output</div>
-              </div>
-
-              <div className="rounded-2xl border border-red-900/30 bg-red-950/10 p-4">
-                <div className="mb-3 flex items-center gap-2 text-xs uppercase tracking-[0.22em] text-red-400">
-                  <Target size={14} />
-                  Predicted Severity
-                </div>
-                <div className="text-3xl font-bold uppercase">{results.predictedSeverity}</div>
-                <div className="mt-1 text-sm text-zinc-400">Model-classified event severity from the hazard output</div>
-              </div>
-
-              <div className="rounded-2xl border border-red-900/30 bg-red-950/10 p-4">
-                <div className="mb-3 flex items-center gap-2 text-xs uppercase tracking-[0.22em] text-red-400">
-                  <TrendingUp size={14} />
-                  Risk Alignment
-                </div>
-                <div className="text-3xl font-bold">{results.predictionAccuracy}%</div>
-                <div className="mt-1 text-sm text-zinc-400">Reliability-adjusted score for how well your response matched the modeled event</div>
-              </div>
-
-              <div className="rounded-2xl border border-red-900/30 bg-red-950/10 p-4">
-                <div className="mb-3 flex items-center gap-2 text-xs uppercase tracking-[0.22em] text-red-400">
-                  <Wallet size={14} />
-                  Damage Summary
-                </div>
-                <div className="text-lg font-bold">
-                  Damage Index: {results.expectedDamageIndex}
-                </div>
-                <div className="mt-1 text-sm text-zinc-400">
-                  Lower values indicate lighter modeled infrastructure impact
+                <div className="text-3xl font-bold text-red-400 tracking-wider">{results.resourceEfficiency}%</div>
+                <div className="mt-2 w-full bg-red-950 h-1 border border-red-900/30">
+                  <motion.div initial={{ width: 0 }} animate={{ width: `${results.resourceEfficiency}%` }} className="bg-red-500 h-full" />
                 </div>
               </div>
             </div>
 
-            <div className="mt-6 rounded-2xl border border-red-900/30 bg-red-950/10 p-4">
-              <div className="mb-3 flex items-center gap-2 text-xs uppercase tracking-[0.22em] text-red-400">
-                <Award size={14} />
-                Event Summary
+            {/* Geophysical Telemetry */}
+            <h3 className="text-xs font-bold text-red-500/70 uppercase tracking-widest mb-3 border-b border-red-900/30 pb-2">Geophysical Telemetry</h3>
+            <div className="grid gap-3 sm:grid-cols-3 mb-6">
+              <div className="border border-red-900/20 bg-black p-3">
+                <div className="text-[9px] uppercase tracking-widest text-red-500/60 mb-1 flex items-center gap-1"><Zap size={10}/> Peak Ground Velocity</div>
+                <div className="text-lg font-bold text-red-400">{results.peakGroundVelocity} <span className="text-[10px] text-red-500/40">cm/s</span></div>
               </div>
-              <div className="grid gap-3 text-sm text-zinc-300 sm:grid-cols-3">
-                <div>Magnitude <span className="font-semibold text-white">{results.magnitude.toFixed(1)}</span></div>
-                <div>Assets Deployed <span className="font-semibold text-white">{results.unitsDeployed}</span></div>
-                <div>Damage Index <span className="font-semibold text-white">{results.expectedDamageIndex}</span></div>
+              <div className="border border-red-900/20 bg-black p-3">
+                <div className="text-[9px] uppercase tracking-widest text-red-500/60 mb-1 flex items-center gap-1"><Clock size={10}/> Shaking Duration</div>
+                <div className="text-lg font-bold text-red-400">{results.shakingDuration} <span className="text-[10px] text-red-500/40">sec</span></div>
+              </div>
+              <div className="border border-red-900/20 bg-black p-3">
+                <div className="text-[9px] uppercase tracking-widest text-red-500/60 mb-1 flex items-center gap-1"><AlertTriangle size={10}/> Aftershock Prob</div>
+                <div className="text-lg font-bold text-red-400">{results.aftershockProb}%</div>
+              </div>
+            </div>
+
+            {/* Socio-Economic Impact */}
+            <h3 className="text-xs font-bold text-red-500/70 uppercase tracking-widest mb-3 border-b border-red-900/30 pb-2">Socio-Economic Impact</h3>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="border border-red-900/20 bg-black p-3">
+                <div className="text-[9px] uppercase tracking-widest text-red-500/60 mb-1 flex items-center gap-1"><Wallet size={10}/> Est. Economic Loss</div>
+                <div className="text-lg font-bold text-red-400">${results.economicLossBillion} <span className="text-[10px] text-red-500/40">Billion</span></div>
+              </div>
+              <div className="border border-red-900/20 bg-black p-3">
+                <div className="text-[9px] uppercase tracking-widest text-red-500/60 mb-1 flex items-center gap-1"><Building2 size={10}/> Infra. Integrity</div>
+                <div className="text-lg font-bold text-red-400">{results.infrastructureIntegrity}%</div>
+              </div>
+              <div className="border border-red-900/20 bg-black p-3">
+                <div className="text-[9px] uppercase tracking-widest text-red-500/60 mb-1 flex items-center gap-1"><Home size={10}/> Displaced Persons</div>
+                <div className="text-lg font-bold text-red-400">{results.displacedPersons.toLocaleString()}</div>
               </div>
             </div>
           </div>
 
-          <div className="p-6">
-            <div className="rounded-2xl border border-red-900/30 bg-black/70 p-4">
-              <div className="mb-4 flex items-center gap-2 text-xs uppercase tracking-[0.22em] text-red-400">
+          {/* Right Column: Terminal & Actions */}
+          <div className="p-6 bg-black flex flex-col justify-between">
+            <div className="border border-red-900/30 bg-black/90 p-4 shadow-inner mb-6">
+              <div className="mb-4 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.22em] text-red-500 border-b border-red-900/30 pb-2">
                 <Terminal size={14} />
-                Tactical Debrief
+                Gemini Tactical Debrief
               </div>
 
-              <div className="space-y-3 text-sm text-zinc-300">
-                <div className="rounded-xl border border-red-900/25 bg-red-950/10 p-3">
-                  <span className="mr-2 text-red-400">{'>'}</span>
-                  Predicted severity: {results.predictedSeverity.toUpperCase()}
+              <div className="space-y-3 text-[10px] text-red-400/80 tracking-widest uppercase leading-relaxed">
+                <div className="flex gap-2">
+                  <span className="text-red-500">{'>'}</span>
+                  <span>Event logged: Magnitude {results.magnitude.toFixed(1)}. {results.unitsDeployed} Mitigation assets deployed.</span>
                 </div>
-
-                <div className="rounded-xl border border-red-900/25 bg-red-950/10 p-3">
-                  <span className="mr-2 text-red-400">{'>'}</span>
-                  Model reliability: {results.modelReliability}%
+                <div className="flex gap-2">
+                  <span className="text-red-500">{'>'}</span>
+                  <span>Damage Index registered at {results.expectedDamageIndex}/100. Structural integrity compromised in {results.infrastructureIntegrity < 50 ? 'majority' : 'minority'} of sectors.</span>
                 </div>
-
-                <div className="rounded-xl border border-red-900/25 bg-red-950/10 p-3">
-                  <span className="mr-2 text-red-400">{'>'}</span>
-                  Response efficiency: {results.resourceEfficiency}%
+                <div className="flex gap-2">
+                  <span className="text-red-500">{'>'}</span>
+                  <span>{results.displacedPersons > 50000 ? 'CRITICAL: Massive displacement detected. Initiate emergency shelter protocols.' : 'Displacement within expected parameters for M' + results.magnitude.toFixed(1) + ' event.'}</span>
                 </div>
+                <div className="flex gap-2">
+                  <span className="text-red-500">{'>'}</span>
+                  <span>Overall Grade: {grade.desc}</span>
+                </div>
+                <div className="w-2 h-3 bg-red-500 animate-pulse mt-4" />
               </div>
             </div>
 
-            <div className="mt-6 flex flex-col gap-3">
+            <div className="flex flex-col gap-3">
               {onViewSimulation && (
                 <button
                   onClick={onViewSimulation}
-                  className="rounded-xl border border-red-500/60 bg-red-600 px-4 py-3 text-sm font-semibold uppercase tracking-[0.18em] text-white transition hover:bg-red-700"
+                  className="w-full py-4 bg-orange-600/10 hover:bg-orange-600/20 border border-orange-600 text-orange-400 font-bold tracking-widest text-xs uppercase transition-all shadow-[0_0_15px_rgba(251,146,60,0.2)] hover:shadow-[0_0_25px_rgba(251,146,60,0.4)]"
                 >
                   Explore Simulation
                 </button>
@@ -241,18 +172,16 @@ export const ResultsScreen = ({
               {onResetSimulation && (
                 <button
                   onClick={onResetSimulation}
-                  className="rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-sm font-semibold uppercase tracking-[0.18em] text-white transition hover:bg-zinc-800"
+                  className="w-full flex items-center justify-center gap-3 py-4 bg-red-950/30 hover:bg-red-900/40 border border-red-600 text-red-500 font-bold tracking-widest text-xs uppercase transition-all hover:shadow-[0_0_25px_rgba(220,38,38,0.4)]"
                 >
-                  <span className="inline-flex items-center gap-2">
-                    <RotateCcw size={14} />
-                    New Simulation
-                  </span>
+                  <RotateCcw size={14} />
+                  New Scenario
                 </button>
               )}
 
               <button
                 onClick={onReset}
-                className="rounded-xl border border-red-900/40 bg-black px-4 py-3 text-sm font-semibold uppercase tracking-[0.18em] text-red-300 transition hover:bg-red-950/30"
+                className="w-full flex items-center justify-center gap-3 py-4 bg-black hover:bg-red-950/20 border border-red-900/50 text-red-500/70 font-bold tracking-widest text-xs uppercase transition-all"
               >
                 Return to Menu
               </button>

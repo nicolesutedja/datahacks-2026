@@ -633,25 +633,75 @@ export const MapboxContainer = ({
     };
   }, []);
 
-  useEffect(() => {
-    if (!map.current) return;
+// Inside MapboxContainer.tsx, replace the second useEffect with this:
 
-    if (epicenter) {
-      if (!epicenterMarker.current) {
-        epicenterMarker.current = new mapboxgl.Marker({
-          element: createEpicenterMarkerElement(),
-        })
-          .setLngLat([epicenter.lng, epicenter.lat])
-          .addTo(map.current);
-      } else {
-        epicenterMarker.current.setLngLat([epicenter.lng, epicenter.lat]);
-      }
+  // 1. Map Camera Fly-To & Pitch
+  useEffect(() => {
+    if (!map.current || !epicenter) return;
+
+    // Fly to epicenter with tactical pitch and zoom
+    map.current.flyTo({
+      center: [epicenter.lng, epicenter.lat],
+      zoom: 10.5, // Zoomed out enough to see the region
+      pitch: 55,  // Tactical 3D angle
+      bearing: 15, // Slight rotation
+      duration: 2500,
+      essential: true
+    });
+
+    // Epicenter Marker
+    if (!epicenterMarker.current) {
+      epicenterMarker.current = new mapboxgl.Marker({
+        element: createEpicenterMarkerElement(),
+      })
+        .setLngLat([epicenter.lng, epicenter.lat])
+        .addTo(map.current);
     } else {
-      epicenterMarker.current?.remove();
-      epicenterMarker.current = null;
+      epicenterMarker.current.setLngLat([epicenter.lng, epicenter.lat]);
     }
   }, [epicenter]);
 
+  // 2. Generate Unexplored Zones near the Epicenter
+  useEffect(() => {
+    if (!map.current || !epicenter) return;
+
+    // Generate 3 random unexplored zones around the epicenter
+    const zones = [
+      { lng: epicenter.lng + 0.05, lat: epicenter.lat + 0.05 },
+      { lng: epicenter.lng - 0.04, lat: epicenter.lat + 0.02 },
+      { lng: epicenter.lng + 0.02, lat: epicenter.lat - 0.06 }
+    ];
+
+    zones.forEach((zone, index) => {
+      const el = document.createElement('div');
+      el.className = 'unexplored-zone-marker';
+      el.innerHTML = `
+        <div style="
+          width: 30px; height: 30px;
+          border-radius: 4px;
+          border: 2px dashed rgba(245, 158, 11, 0.8);
+          background: rgba(0, 0, 0, 0.7);
+          color: #f59e0b;
+          display: flex; align-items: center; justify-content: center;
+          font-size: 10px; font-weight: bold; cursor: pointer;
+          box-shadow: 0 0 10px rgba(245, 158, 11, 0.3);
+        ">?</div>
+      `;
+
+      // Clicking an unexplored zone runs the Gemini Insight tool
+      el.addEventListener('click', () => {
+        onRegionInsightClickRef.current(zone.lat, zone.lng);
+        el.style.borderColor = '#22c55e'; // Turn green when scanned
+        el.style.color = '#22c55e';
+        el.innerHTML = '✓';
+      });
+
+      new mapboxgl.Marker({ element: el })
+        .setLngLat([zone.lng, zone.lat])
+        .addTo(map.current!);
+    });
+
+  }, [epicenter]);
   useEffect(() => {
     if (!map.current) return;
 

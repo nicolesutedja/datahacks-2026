@@ -8,7 +8,7 @@ export const GAME_STATES = {
 
 type GameState = typeof GAME_STATES[keyof typeof GAME_STATES];
 
-interface Position {
+export interface Position {
   lat: number;
   lng: number;
 }
@@ -20,7 +20,7 @@ export interface Unit {
   status: 'DEPLOYING' | 'ACTIVE';
 }
 
-interface Results {
+export interface Results {
   livesSaved: number;
   resourceEfficiency: number;
   predictionAccuracy: number;
@@ -29,18 +29,25 @@ interface Results {
   expectedDamageIndex: number;
   predictedSeverity: 'low' | 'moderate' | 'high' | 'severe';
   modelReliability: number;
+  // Advanced Telemetry for the new Results Screen
+  economicLossBillion: number;
+  peakGroundVelocity: number;
+  shakingDuration: number;
+  aftershockProb: number;
+  infrastructureIntegrity: number;
+  displacedPersons: number;
 }
 
 const TOTAL_BUDGET = 10000000;
 const MAX_UNITS = 5;
 
 const UNIT_COSTS = {
-  ambulance: 1500000,
-  fire: 2000000,
-  hospital: 3000000,
+  ambulance: 1500000, // Vertical Drainage
+  fire: 2000000,      // Vibro-Stone Rigs
+  hospital: 3000000,  // Cement Injections
 } as const;
 
-interface ModelAssessment {
+export interface ModelAssessment {
   mean_pgv: number;
   max_pgv: number;
   high_risk_ratio: number;
@@ -49,6 +56,29 @@ interface ModelAssessment {
   predicted_severity: 'low' | 'moderate' | 'high' | 'severe';
   model_reliability: number;
 }
+
+// Inland SoCal Generator
+export const generateInlandEpicenter = (): Position => {
+  const minLat = 32.6; 
+  const maxLat = 34.5; 
+  const maxLng = -116.0; 
+  
+  let lat = 0;
+  let lng = 0;
+  let isLand = false;
+
+  while (!isLand) {
+    lat = minLat + Math.random() * (maxLat - minLat);
+    const coastLng = -117.2 - 1.0 * (lat - 32.7);
+    lng = coastLng + Math.random() * (maxLng - coastLng);
+    
+    if (lng > coastLng && lng < maxLng) {
+      isLand = true;
+    }
+  }
+
+  return { lat, lng };
+};
 
 export const useGameManager = (modelAssessment: ModelAssessment | null) => {
   const [gameState, setGameState] = useState<GameState>(GAME_STATES.SETUP);
@@ -60,13 +90,16 @@ export const useGameManager = (modelAssessment: ModelAssessment | null) => {
   const [countdown, setCountdown] = useState<number | null>(null);
   const [results, setResults] = useState<Results | null>(null);
 
+  // Dynamic budget tracking
   const spentBudget = units.reduce((sum, unit) => sum + UNIT_COSTS[unit.type], 0);
   const currentFunds = Math.max(0, TOTAL_BUDGET - spentBudget);
 
+  // Wave propagation timer
   useEffect(() => {
     if (gameState === GAME_STATES.PROPAGATING) {
       const startTime = Date.now();
-      const duration = 15000;
+      // Wave duration based on magnitude
+      const duration = magnitude < 5 ? 10000 : magnitude < 6 ? 12000 : magnitude < 7 ? 15000 : magnitude < 8 ? 18000 : 22000;
 
       const interval = setInterval(() => {
         const elapsed = Date.now() - startTime;
@@ -84,102 +117,86 @@ export const useGameManager = (modelAssessment: ModelAssessment | null) => {
 
       return () => clearInterval(interval);
     }
-  }, [gameState]);
+  }, [gameState, magnitude]);
 
   const calculateResults = useCallback(() => {
-    const deploymentRatio = Math.min(1, units.length / 5);
-    const typeDiversity = new Set(units.map((u) => u.type)).size / 3;
-  
-    const severityMultiplier =
-      modelAssessment?.predicted_severity === 'severe'
-        ? 1.2
-        : modelAssessment?.predicted_severity === 'high'
-        ? 1.0
-        : modelAssessment?.predicted_severity === 'moderate'
-        ? 0.8
-        : 0.6;
-  
-    const expectedDamageIndex = modelAssessment?.expected_damage_index ?? magnitude * 10;
+    // 1. Establish the Baseline
+    const basePopulation = 150000;
+    const soilScore = 8; 
+    const baseRisk = magnitude * soilScore;
 
-    const highRiskRatio = modelAssessment?.high_risk_ratio ?? 0.3;
-    const extremeRiskRatio = modelAssessment?.extreme_risk_ratio ?? 0.1;
-    const modelReliability = Math.min(
-      100,
-      Math.max(48, Math.round((modelAssessment?.model_reliability ?? 0.72) * 100))
-    );
-  
-    const readinessScore = Math.min(
-      100,
-      Math.round(35 + deploymentRatio * 40 + typeDiversity * 25)
-    );
-  
-    const resourceEfficiency = Math.min(
-      100,
-      Math.round(
-        25 +
-          deploymentRatio * 35 +
-          typeDiversity * 20 +
-          (1 - Math.min(1, expectedDamageIndex / 100)) * 20
-      )
-    );
-  
-    const predictionAccuracy = Math.min(
-      100,
-      Math.max(
-        52,
-        Math.round(
-          modelReliability * 0.82 -
-            Math.max(0, expectedDamageIndex - 80) * 0.08 +
-            deploymentRatio * 10 +
-            typeDiversity * 8
-        )
-      )
-    );
-  
-    const exposureBase = 18000 + magnitude * 5500;
-    const mitigationScore = 0.22 + deploymentRatio * 0.38 + typeDiversity * 0.22;
-    const riskPenalty =
-      1 -
-      Math.min(
-        0.55,
-        expectedDamageIndex / 250 +
-        highRiskRatio * 0.35 +
-        extremeRiskRatio * 0.5
-      );
-  
-      const livesSaved = Math.max(
-        0,
-        Math.round(
-          exposureBase *
-            severityMultiplier *
-            mitigationScore *
-            riskPenalty *
-            (0.6 + modelReliability / 200)
-        )
-      );
-  
+    // 2. Calculate Investment Effectiveness (I_eff)
+    let I_eff = 0;
+    units.forEach(u => {
+      if (u.type === 'ambulance') I_eff += 10;
+      if (u.type === 'fire') I_eff += 15;
+      if (u.type === 'hospital') I_eff += 25;
+    });
+
+    // 3. The Formula: Casualty Rate = (Risk - Defenses) / 100
+    let baseCasualtyRate = (baseRisk - I_eff) / 100;
+    baseCasualtyRate = Math.max(0, Math.min(1, baseCasualtyRate)); 
+
+    // 4. Add a slight "Chaos Factor" (±5% variance)
+    const chaosFactor = 0.95 + (Math.random() * 0.10);
+    const finalCasualtyRate = Math.min(1, baseCasualtyRate * chaosFactor);
+
+    // 5. Generate Core Stats
+    const livesSaved = Math.floor(basePopulation * (1 - finalCasualtyRate));
+    
+    // Merge ML Assessment data if available, otherwise use procedural math
+    const expectedDamageIndex = modelAssessment?.expected_damage_index 
+      ? Math.round(modelAssessment.expected_damage_index) 
+      : Math.floor(finalCasualtyRate * 100);
+    
+    const maxPossibleInvestment = 5 * 25; 
+    const resourceEfficiency = Math.max(30, Math.floor((I_eff / maxPossibleInvestment) * 100));
+
+    let predictedSeverity: 'low' | 'moderate' | 'high' | 'severe' = modelAssessment?.predicted_severity || 'moderate';
+    if (!modelAssessment) {
+      if (magnitude >= 7.5) predictedSeverity = 'severe';
+      else if (magnitude >= 6.5) predictedSeverity = 'high';
+      else if (magnitude < 5.5) predictedSeverity = 'low';
+    }
+
+    const modelReliability = modelAssessment?.model_reliability 
+      ? Math.floor(modelAssessment.model_reliability * 100) 
+      : Math.floor(90 + Math.random() * 8);
+
+    // 6. Advanced Telemetry
+    const peakGroundVelocity = modelAssessment?.max_pgv 
+      ? Math.floor(modelAssessment.max_pgv * 100) 
+      : Math.floor(Math.pow(10, 0.4 * magnitude - 1) * (soilScore * 0.8)); 
+      
+    const shakingDuration = Math.floor((magnitude - 4.0) * 14 + Math.random() * 6); 
+    const aftershockProb = Math.min(99, Math.floor((magnitude - 5.0) * 22 + Math.random() * 10));
+    const infrastructureIntegrity = Math.max(0, 100 - expectedDamageIndex);
+    const economicLossBillion = Number((finalCasualtyRate * magnitude * 5.2 + (magnitude > 6.5 ? 3.5 : 0.8)).toFixed(2));
+    const displacedPersons = Math.min(basePopulation, Math.floor(basePopulation * finalCasualtyRate * 2.5));
+
     setResults({
       livesSaved,
       resourceEfficiency,
-      predictionAccuracy,
+      predictionAccuracy: Math.floor(85 + Math.random() * 10), 
+      modelReliability,
       magnitude,
       unitsDeployed: units.length,
-      expectedDamageIndex: Math.round(expectedDamageIndex),
-      predictedSeverity: modelAssessment?.predicted_severity ?? 'moderate',
-      modelReliability,
+      expectedDamageIndex,
+      predictedSeverity,
+      economicLossBillion,
+      peakGroundVelocity,
+      shakingDuration,
+      aftershockProb,
+      infrastructureIntegrity,
+      displacedPersons
     });
-  }, [magnitude, modelAssessment, units]);
+  }, [magnitude, units, modelAssessment]);
 
   const startSimulation = useCallback(() => {
     if (!epicenter) return;
     setGameState(GAME_STATES.PROPAGATING);
     setWaveProgress(0);
-
-    const duration =
-      magnitude < 5 ? 10 : magnitude < 6 ? 12 : magnitude < 7 ? 15 : magnitude < 8 ? 18 : 22;
-
-    setCountdown(duration);
-  }, [epicenter, magnitude]);
+  }, [epicenter]);
 
   const resetSimulation = useCallback(() => {
     setGameState(GAME_STATES.SETUP);
@@ -216,6 +233,7 @@ export const useGameManager = (modelAssessment: ModelAssessment | null) => {
       setUnits((prev) => [...prev, newUnit]);
       setSelectedUnitType(null);
 
+      // Simulate deployment delay
       setTimeout(() => {
         setUnits((prev) =>
           prev.map((u) => (u.id === newUnit.id ? { ...u, status: 'ACTIVE' } : u))
