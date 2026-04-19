@@ -595,7 +595,6 @@ export const MapboxContainer = ({
           WAVE_IDS.sLine,
           WAVE_IDS.surfaceFill,
           WAVE_IDS.surfaceLine,
-          SOIL_IDS.heatLayer,
         ],
         false
       );
@@ -705,7 +704,7 @@ export const MapboxContainer = ({
         WAVE_IDS.sLine,
         WAVE_IDS.surfaceFill,
         WAVE_IDS.surfaceLine,
-        SOIL_IDS.heatLayer,
+
       ],
       shouldShowSimulationLayers
     );
@@ -752,9 +751,7 @@ export const MapboxContainer = ({
       ) as any
     );
 
-    soilSource?.setData(
-      (simulationOutput?.soil_heatmap ?? EMPTY_FEATURE_COLLECTION) as any
-    );
+    soilSource?.setData(EMPTY_FEATURE_COLLECTION as any);
 
     map.current.setPaintProperty(
       WAVE_IDS.pFill,

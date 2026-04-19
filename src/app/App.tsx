@@ -379,7 +379,7 @@ export default function App() {
     setModelAssessment(null);
   };
 
-  const showLiquefactionAlert = waveProgress > 0.5 && gameState === GAME_STATES.PROPAGATING;
+  const showLiquefactionAlert = false;
 
   if (appMode === 'MENU') {
     return (

@@ -326,7 +326,13 @@ def summarize_impact(adjusted_pgv: list[float], risk_classes: list[str], confide
     )
 
     calibrated_reliability = float(
-        max(0.0, min(1.0, 0.7 * confidence_score + 0.3 * (1.0 - extreme_risk_ratio * 0.5)))
+        max(
+            0.45,
+            min(
+                1.0,
+                0.82 * confidence_score + 0.18 * (1.0 - extreme_risk_ratio * 0.35),
+            ),
+        )
     )
 
     if damage_index < 25:

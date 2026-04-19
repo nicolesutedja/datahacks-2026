@@ -103,7 +103,10 @@ export const useGameManager = (modelAssessment: ModelAssessment | null) => {
 
     const highRiskRatio = modelAssessment?.high_risk_ratio ?? 0.3;
     const extremeRiskRatio = modelAssessment?.extreme_risk_ratio ?? 0.1;
-    const modelReliability = Math.round((modelAssessment?.model_reliability ?? 0.72) * 100);
+    const modelReliability = Math.min(
+      100,
+      Math.max(48, Math.round((modelAssessment?.model_reliability ?? 0.72) * 100))
+    );
   
     const readinessScore = Math.min(
       100,
@@ -122,9 +125,14 @@ export const useGameManager = (modelAssessment: ModelAssessment | null) => {
   
     const predictionAccuracy = Math.min(
       100,
-      Math.round(
-        modelReliability * (0.7 + 0.3 * (1 - extremeRiskRatio)) -
-        Math.max(0, expectedDamageIndex - 70) * 0.2
+      Math.max(
+        52,
+        Math.round(
+          modelReliability * 0.82 -
+            Math.max(0, expectedDamageIndex - 80) * 0.08 +
+            deploymentRatio * 10 +
+            typeDiversity * 8
+        )
       )
     );
   
