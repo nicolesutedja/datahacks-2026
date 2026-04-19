@@ -66,7 +66,7 @@ export const LandingPage = ({ onStartScenario, onSandboxMode }: LandingPageProps
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="w-[600px] bg-slate-900 border border-red-600 p-6 text-white shadow-[0_0_30px_rgba(220,38,38,0.2)]"
+              className="w-[600px] bg-black border border-red-600 p-6 text-white shadow-[0_0_30px_rgba(220,38,38,0.2)]"
             >
               <div className="flex justify-between items-center mb-6 border-b border-red-900/50 pb-4">
                 <h2 className="text-2xl font-bold text-red-500 flex items-center gap-3"
@@ -81,8 +81,8 @@ export const LandingPage = ({ onStartScenario, onSandboxMode }: LandingPageProps
 
               {showAbout ? (
                 <div className="space-y-4">
-                  <p className="text-sm text-red-500 leading-relaxed"
-                  style={{ fontFamily: 'Orbitron, sans-serif' }}   >
+                  <p className="text-base text-red-500 leading-relaxed"
+                  style={{ fontFamily: 'Rajdhani, sans-serif' }}   >
                    SeismicStabilize is an innovative educational platform dedicated to raising awareness 
                    about earthquake dynamics and prevention. By combining real-time seismic wave simulations with practical urban 
                   planning strategies, we empower users to understand and apply essential techniques like soil stabilization and 
@@ -90,10 +90,9 @@ export const LandingPage = ({ onStartScenario, onSandboxMode }: LandingPageProps
                   </p>
                    <p
 
-      className="text-sm text-red-500 leading-relaxed"
+      className="text-base text-red-500 leading-relaxed"
 
-      style={{ fontFamily: 'Orbitron, sans-serif' }}
-
+      style={{ fontFamily: 'Rajdhani, sans-serif' }}
     >
 
       This project is a tactical, educational gaming platform built by the NJ Squared
