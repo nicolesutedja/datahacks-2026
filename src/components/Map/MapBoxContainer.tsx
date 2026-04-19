@@ -766,20 +766,20 @@ export const MapboxContainer = ({
     }
 
     const maxAmplitude = simulationOutput?.max_amplitude ?? 0.018;
-    const amplitudeScale = Math.max(0.45, Math.min(maxAmplitude / 0.02, 2.5));
+    const amplitudeScale = Math.max(0.85, Math.min(maxAmplitude / 0.02, 1.25));
 
-    const magnitudeSpeedFactor = Math.max(0.75, 0.75 + (magnitude - 5.0) * 0.18);
+    const magnitudeSpeedFactor = Math.max(0.9, 1 + (magnitude - 5.0) * 0.35);
 
     const pRadiusMeters =
-      waveProgress * 9500 * magnitudeSpeedFactor * amplitudeScale;
+      waveProgress * 22000 * magnitudeSpeedFactor * amplitudeScale;
 
     const sProgress = Math.max(0, (waveProgress - 0.08) / 0.92);
     const sRadiusMeters =
-      sProgress * 16500 * magnitudeSpeedFactor * amplitudeScale;
+      sProgress * 42000 * magnitudeSpeedFactor * amplitudeScale;
 
     const surfaceProgress = Math.max(0, (waveProgress - 0.16) / 0.84);
     const surfaceRadiusMeters =
-      surfaceProgress * 23000 * magnitudeSpeedFactor * amplitudeScale;
+      surfaceProgress * 65000 * magnitudeSpeedFactor * amplitudeScale;
 
     const pSource = map.current.getSource(WAVE_IDS.pSource) as mapboxgl.GeoJSONSource;
     const sSource = map.current.getSource(WAVE_IDS.sSource) as mapboxgl.GeoJSONSource;
