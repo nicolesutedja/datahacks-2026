@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 interface MissionBriefingModalProps {
   onConfirm: () => void;
   onClose: () => void;
+  isSfxMuted: boolean; // Add this prop to accept the global mute state
 }
 
 const STEPS = [
@@ -29,7 +30,7 @@ const STEPS = [
   },
 ];
 
-export const MissionBriefingModal = ({ onConfirm, onClose }: MissionBriefingModalProps) => {
+export const MissionBriefingModal = ({ onConfirm, onClose, isSfxMuted }: MissionBriefingModalProps) => {
   const [revealedCount, setRevealedCount] = useState(1);
   const [closing, setClosing] = useState(false);
   
@@ -48,6 +49,9 @@ export const MissionBriefingModal = ({ onConfirm, onClose }: MissionBriefingModa
   const speak = async (text: string) => {
     killAudio(); // Stop current speech before starting new one
     
+    // Check if SFX is muted before making the API call
+    if (isSfxMuted) return;
+
     const VOICE_ID = 'gVh6lddROTbOaOz9AAnY';
 
     try {
@@ -71,11 +75,26 @@ export const MissionBriefingModal = ({ onConfirm, onClose }: MissionBriefingModa
       const url = URL.createObjectURL(blob);
       const audio = new Audio(url);
       audioRef.current = audio;
-      audio.play();
+      
+      // Double check mute state just in case it changed while fetching
+      if (!isSfxMuted) {
+        audio.play().catch(e => console.error("TTS playback prevented:", e));
+      }
     } catch (err) {
       console.error('Comms failure:', err);
     }
   };
+
+  // Keep the audio element's muted state in sync with the prop
+  useEffect(() => {
+     if (audioRef.current) {
+         audioRef.current.muted = isSfxMuted;
+         // Optionally pause it immediately if muted while playing
+         if (isSfxMuted && !audioRef.current.paused) {
+             audioRef.current.pause();
+         }
+     }
+  }, [isSfxMuted]);
 
   useEffect(() => {
     if (!closing) {
