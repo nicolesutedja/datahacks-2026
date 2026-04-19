@@ -236,7 +236,9 @@ export default function App() {
             max_amplitude: data.max_amplitude ?? 0.02,
             pgv: data.adjusted_pgv ?? data.pgv,
             risk_classes: data.risk_classes,
-            confidence: data.confidence
+            confidence: data.confidence,
+            soil_heatmap: data.soil_heatmap,
+            epicenter_soil: data.epicenter_soil,
           });
 
         } catch (error) {
@@ -293,7 +295,39 @@ export default function App() {
         confidence: data.confidence
       });
 
+  
+    const apiBase =
+      import.meta.env.VITE_SEISMIC_API_URL?.trim() || 'http://localhost:8000';
+
+    try {
+      const response = await fetch(
+        `${apiBase}/simulate?lat=${lat}&lng=${lng}&magnitude=${mag}`
+      );
+
+      const data = await response.json();
+      console.log("ML RESPONSE:", data);
+
+      if (!data.waveform || data.waveform.length === 0) {
+        setMlData(null);
+        return;
+      }
+
+      setMlData({
+        waveform: data.waveform,
+        max_amplitude: data.max_amplitude ?? 0.02,
+        pgv: data.adjusted_pgv ?? data.pgv,
+        risk_classes: data.risk_classes,
+        confidence: data.confidence,
+        soil_heatmap: data.soil_heatmap,
+        epicenter_soil: data.epicenter_soil,
+      });
+
       startSimulation();
+    } catch (err) {
+      console.error("Random simulation failed:", err);
+      setMlData(null);
+    }
+
     } catch (err) {
       console.error("Random simulation failed:", err);
       setMlData(null);
