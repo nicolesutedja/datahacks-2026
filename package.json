@@ -48,6 +48,7 @@
     "date-fns": "3.6.0",
     "embla-carousel-react": "8.6.0",
     "input-otp": "1.4.2",
+    "joblib": "^10.1.1",
     "lucide-react": "0.487.0",
     "mapbox-gl": "^3.22.0",
     "maplibre-gl": "^5.23.0",

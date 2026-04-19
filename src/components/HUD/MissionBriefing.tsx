@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface MissionBriefingModalProps {
@@ -30,16 +30,14 @@ const STEPS = [
 ];
 
 export const MissionBriefingModal = ({ onConfirm, onClose }: MissionBriefingModalProps) => {
-  const [visibleSteps, setVisibleSteps] = useState<number[]>([]);
+  const [revealedCount, setRevealedCount] = useState(1);
   const [closing, setClosing] = useState(false);
 
-  useEffect(() => {
-    STEPS.forEach((_, i) => {
-      setTimeout(() => {
-        setVisibleSteps(prev => [...prev, i]);
-      }, 200 + i * 180);
-    });
-  }, []);
+  const isLastStep = revealedCount === STEPS.length;
+
+  const handleNext = () => {
+    if (!isLastStep) setRevealedCount(c => c + 1);
+  };
 
   const handleConfirm = () => {
     setClosing(true);
@@ -85,7 +83,6 @@ export const MissionBriefingModal = ({ onConfirm, onClose }: MissionBriefingModa
               alignItems: 'center',
               gap: '12px',
             }}>
-              {/* Avatar */}
               <div style={{
                 width: '40px', height: '40px',
                 border: '1px solid rgba(220,38,38,0.45)',
@@ -109,10 +106,12 @@ export const MissionBriefingModal = ({ onConfirm, onClose }: MissionBriefingModa
                 </div>
               </div>
 
-              {/* Live dot */}
               <PulseDot />
 
-              {/* Close */}
+              <div style={{ color: 'rgba(239,68,68,0.4)', fontSize: '10px', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+                {revealedCount} / {STEPS.length}
+              </div>
+
               <button
                 onClick={handleClose}
                 style={{
@@ -138,38 +137,54 @@ export const MissionBriefingModal = ({ onConfirm, onClose }: MissionBriefingModa
 
             {/* Steps */}
             <div style={{ padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {STEPS.map((step, i) => (
-                <motion.div
-                  key={step.id}
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={visibleSteps.includes(i) ? { opacity: 1, y: 0 } : { opacity: 0, y: 6 }}
-                  transition={{ duration: 0.3, ease: 'easeOut' }}
-                  style={{
-                    display: 'flex', gap: '12px', alignItems: 'flex-start',
-                    padding: '11px 13px',
-                    border: '1px solid rgba(220,38,38,0.12)',
-                    background: 'rgba(220,38,38,0.02)',
-                  }}
-                >
-                  <div style={{
-                    fontSize: '9px', fontWeight: 700, letterSpacing: '0.12em',
-                    color: '#dc2626', background: 'rgba(220,38,38,0.1)',
-                    border: '1px solid rgba(220,38,38,0.28)',
-                    padding: '3px 7px', flexShrink: 0, marginTop: '1px',
-                    textTransform: 'uppercase',
-                  }}>
-                    {step.id}
-                  </div>
-                  <div>
-                    <div style={{ color: '#ef4444', fontSize: '10px', fontWeight: 700, letterSpacing: '0.13em', textTransform: 'uppercase', marginBottom: '5px' }}>
-                      {step.title}
-                    </div>
-                    <div style={{ color: 'rgba(220,170,170,0.72)', fontSize: '11px', lineHeight: 1.65, letterSpacing: '0.02em' }}>
-                      {step.body}
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
+              {STEPS.map((step, i) => {
+                const isRevealed = i < revealedCount;
+                const isLatest = i === revealedCount - 1;
+                return (
+                  <AnimatePresence key={step.id}>
+                    {isRevealed && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3, ease: 'easeOut' }}
+                        style={{
+                          display: 'flex', gap: '12px', alignItems: 'flex-start',
+                          padding: '11px 13px',
+                          border: `1px solid ${isLatest ? 'rgba(220,38,38,0.35)' : 'rgba(220,38,38,0.1)'}`,
+                          background: isLatest ? 'rgba(220,38,38,0.05)' : 'rgba(220,38,38,0.01)',
+                          transition: 'border-color 0.4s, background 0.4s',
+                        }}
+                      >
+                        <div style={{
+                          fontSize: '9px', fontWeight: 700, letterSpacing: '0.12em',
+                          color: isLatest ? '#dc2626' : 'rgba(220,38,38,0.3)',
+                          background: isLatest ? 'rgba(220,38,38,0.1)' : 'transparent',
+                          border: `1px solid ${isLatest ? 'rgba(220,38,38,0.28)' : 'rgba(220,38,38,0.12)'}`,
+                          padding: '3px 7px', flexShrink: 0, marginTop: '1px',
+                          textTransform: 'uppercase',
+                        }}>
+                          {step.id}
+                        </div>
+                        <div>
+                          <div style={{
+                            color: isLatest ? '#ef4444' : 'rgba(239,68,68,0.35)',
+                            fontSize: '10px', fontWeight: 700, letterSpacing: '0.13em',
+                            textTransform: 'uppercase', marginBottom: '5px',
+                          }}>
+                            {step.title}
+                          </div>
+                          <div style={{
+                            color: isLatest ? 'rgba(220,170,170,0.75)' : 'rgba(180,100,100,0.28)',
+                            fontSize: '11px', lineHeight: 1.65, letterSpacing: '0.02em',
+                          }}>
+                            {step.body}
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                );
+              })}
             </div>
 
             {/* Footer */}
@@ -179,22 +194,50 @@ export const MissionBriefingModal = ({ onConfirm, onClose }: MissionBriefingModa
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             }}>
               <div style={{ color: 'rgba(239,68,68,0.3)', fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase' }}>
-                Transmission secure // awaiting your order
+                {isLastStep
+                  ? 'Transmission complete // awaiting your order'
+                  : 'Transmission secure // continue reading'}
               </div>
-              <button
-                onClick={handleConfirm}
-                style={{
-                  background: '#dc2626', border: 'none', color: '#000',
-                  fontFamily: "'Courier New', monospace",
-                  fontSize: '10px', fontWeight: 900, letterSpacing: '0.2em',
-                  textTransform: 'uppercase', padding: '9px 22px', cursor: 'pointer',
-                  transition: 'background 0.15s',
-                }}
-                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#ef4444'; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = '#dc2626'; }}
-              >
-                Start the Mission ▶
-              </button>
+
+              {isLastStep ? (
+                <button
+                  onClick={handleConfirm}
+                  style={{
+                    background: '#dc2626', border: 'none', color: '#000',
+                    fontFamily: "'Courier New', monospace",
+                    fontSize: '10px', fontWeight: 900, letterSpacing: '0.2em',
+                    textTransform: 'uppercase', padding: '9px 22px', cursor: 'pointer',
+                    transition: 'background 0.15s',
+                  }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#ef4444'; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = '#dc2626'; }}
+                >
+                  Start the Mission ▶
+                </button>
+              ) : (
+                <button
+                  onClick={handleNext}
+                  style={{
+                    background: 'none',
+                    border: '1px solid rgba(220,38,38,0.45)',
+                    color: '#ef4444',
+                    fontFamily: "'Courier New', monospace",
+                    fontSize: '10px', fontWeight: 700, letterSpacing: '0.2em',
+                    textTransform: 'uppercase', padding: '9px 22px', cursor: 'pointer',
+                    transition: 'background 0.15s, border-color 0.15s',
+                  }}
+                  onMouseEnter={e => {
+                    (e.currentTarget as HTMLButtonElement).style.background = 'rgba(220,38,38,0.1)';
+                    (e.currentTarget as HTMLButtonElement).style.borderColor = '#ef4444';
+                  }}
+                  onMouseLeave={e => {
+                    (e.currentTarget as HTMLButtonElement).style.background = 'none';
+                    (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(220,38,38,0.45)';
+                  }}
+                >
+                  Continue ▶
+                </button>
+              )}
             </div>
           </motion.div>
         </motion.div>
@@ -203,15 +246,13 @@ export const MissionBriefingModal = ({ onConfirm, onClose }: MissionBriefingModa
   );
 };
 
-const PulseDot = () => {
-  return (
-    <motion.div
-      animate={{ opacity: [1, 0.2, 1] }}
-      transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
-      style={{
-        width: '7px', height: '7px', borderRadius: '50%',
-        background: '#dc2626', flexShrink: 0,
-      }}
-    />
-  );
-};
+const PulseDot = () => (
+  <motion.div
+    animate={{ opacity: [1, 0.2, 1] }}
+    transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
+    style={{
+      width: '7px', height: '7px', borderRadius: '50%',
+      background: '#dc2626', flexShrink: 0,
+    }}
+  />
+);
