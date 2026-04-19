@@ -25,12 +25,13 @@ interface MapboxContainerProps {
   gameState: string;
   onMapClick: (lat: number, lng: number) => void;
   selectedUnitType: Unit['type'] | null;
-  
+
   // 2. ADDED: We now pass the ML output down to the map
   simulationOutput: {
     waveform: number[][];
     max_amplitude: number;
   } | null;
+  onZoneClick: (zone: any) => void;
 }
 
 const LA_JOLLA_CENTER: [number, number] = [-117.2713, 32.8328];
@@ -41,14 +42,16 @@ export const MapboxContainer = ({
   waveProgress,
   gameState,
   onMapClick,
-  selectedUnitType,
-  simulationOutput // Destructured here
+  selectedUnitType,   
+  simulationOutput, // Destructured here
+  onZoneClick
 }: MapboxContainerProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const epicenterMarker = useRef<mapboxgl.Marker | null>(null);
   const unitMarkers = useRef<Map<number, mapboxgl.Marker>>(new Map());
 
+  
   // 3. ADDED: Trigger the DOM screen shake when propagating!
   useSeismicVisuals(
     simulationOutput
@@ -70,7 +73,7 @@ export const MapboxContainer = ({
 
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/dark-v11', 
+      style: 'mapbox://styles/mapbox/dark-v11', // Perfect for the tactical theme
       center: LA_JOLLA_CENTER,
       zoom: 12,
       pitch: 60,
@@ -81,7 +84,67 @@ export const MapboxContainer = ({
     map.current.on('load', () => {
       if (!map.current) return;
 
-      map.current.addSource('mapbox-dem', {
+      // --- VULNERABILITY ZONES (Example GeoJSON Layer) ---
+        const vulnerabilityZones = {
+        type: 'FeatureCollection',
+        features: [
+            {
+            type: 'Feature',
+            properties: { 
+                id: 'zone-1',
+                riskLevel: 'critical', // Will map to dark red
+                health: 30, // Out of 100
+                type: 'liquefaction' 
+            },
+            geometry: {
+                type: 'Polygon',
+                // Example coordinates for a block in San Diego
+                coordinates: [[[-117.27, 32.83], [-117.26, 32.83], [-117.26, 32.84], [-117.27, 32.84], [-117.27, 32.83]]] 
+            }
+            }
+            // Add more zones here...
+        ]
+        };
+
+        //  Add the Data Source
+        map.current.addSource('vulnerability-zones', {
+        type: 'geojson',
+        data: vulnerabilityZones
+        });
+
+        // 2. Add the Fill Layer (The colored regions)
+        map.current.addLayer({
+        id: 'zone-fill',
+        type: 'fill',
+        source: 'vulnerability-zones',
+        paint: {
+            // Dynamic coloring based on health!
+            'fill-color': [
+            'step',
+            ['get', 'health'],
+            '#dc2626', // < 40 health = Dark Red
+            40, '#f97316', // 40-70 health = Orange
+            70, '#54d630'  // > 70 health = Yellow/Greenish
+            ],
+            'fill-opacity': 0.4
+        }
+        });
+
+        // 3. Add a glowing outline to the zones
+        map.current.addLayer({
+        id: 'zone-outline',
+        type: 'line',
+        source: 'vulnerability-zones',
+        paint: {
+            'line-color': '#ff0000',
+            'line-width': 2,
+            'line-dasharray': [2, 2] // Tactical dashed line
+        }
+        });
+        
+    
+      // Add Mapbox 3D Terrain
+    map.current.addSource('mapbox-dem', {
         type: 'raster-dem',
         url: 'mapbox://mapbox.mapbox-terrain-dem-v1',
         tileSize: 512,
@@ -104,6 +167,7 @@ export const MapboxContainer = ({
         }
       });
 
+      // Add Atmosphere/Sky
       map.current.addLayer({
         id: 'sky',
         type: 'sky',
@@ -156,6 +220,7 @@ export const MapboxContainer = ({
 
   // Update Unit Markers
   useEffect(() => {
+    // ... [Your existing unit markers code remains exactly the same] ...
     if (!map.current) return;
 
     const currentIds = new Set(units.map(u => u.id));
@@ -239,6 +304,7 @@ export const MapboxContainer = ({
       }
     }
 
+
     // INJECTED 2: Dynamic Radius calculation based on amplitude!
     const predictedAmplitude = simulationOutput?.max_amplitude || 0.03;
     const maxRadiusKm = predictedAmplitude * 3000; 
@@ -281,30 +347,30 @@ export const MapboxContainer = ({
       map.current.addSource(sourceId, {
         type: 'geojson',
         data: newGeoJson
-      });
+    });
 
-      map.current.addLayer({
-        id: layerId,
-        type: 'fill',
-        source: sourceId,
-        paint: {
-          'fill-color': fillColor,
-          'fill-opacity': 0.2
-        }
-      });
+    map.current.addLayer({
+      id: layerId,
+      type: 'fill',
+      source: sourceId,
+      paint: {
+        'fill-color': fillColor,
+        'fill-opacity': 0.2
+      }
+    });
 
-      map.current.addLayer({
-        id: `${layerId}-outline`,
-        type: 'line',
-        source: sourceId,
-        paint: {
-          'line-color': outlineColor,
-          'line-width': 4,
-          'line-opacity': 0.8
-        }
-      });
+    map.current.addLayer({
+      id: `${layerId}-outline`,
+      type: 'line',
+      source: sourceId,
+      paint: {
+        'line-color': outlineColor,
+        'line-width': 4,
+        'line-opacity': 0.8
+      }
+    });
     }
-  }, [epicenter, waveProgress, gameState, simulationOutput]);
+}, [epicenter, waveProgress, gameState, simulationOutput]);
 
   // INJECTED 3: The CSS CSS Screen Shake Algorithm!
   const shakeTransform = useMemo(() => {

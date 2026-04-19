@@ -1,31 +1,61 @@
+import { useState } from 'react';
 import { motion } from 'motion/react';
 import { AlertTriangle, ArrowLeft } from 'lucide-react';
-import { MapLibreContainer } from '../Map/MapLibreContainer';
 import { TopBar } from './TopBar';
 import { Sidebar } from './Sidebar';
 import { ResourceDock } from './ResourceDock';
 import { TasksPanel } from './TasksPanel';
 import { ResultsScreen } from '../Modals/ResultsScreen';
 import { MapboxContainer } from '../Map/MapboxContainer';
+import { ZoneIntelModal } from '../Modals/ZoneIntelModal'; 
 
 export const GameMode = ({
   gameState, epicenter, magnitude, units, selectedUnitType, waveProgress, countdown, results,
-  setMagnitude, setSelectedUnitType, startSimulation, resetSimulation, handleMapClick, onReturnToMenu, GAME_STATES
+  setMagnitude, setSelectedUnitType, startSimulation, resetSimulation, handleMapClick, onReturnToMenu, GAME_STATES,
+  simulationOutput // Passed down for Mapbox to render dynamic wave colors
 }: any) => {
+
+  // --- ZONE POPUP STATE ---
+  const [activeZone, setActiveZone] = useState<any | null>(null);
+  
+  // Mock funds - In a full implementation, this should be tracked in useGameManager
+  const currentFunds = 10000000; 
+
+  const handleZoneUpgrade = (zoneId: string) => {
+    console.log("Upgrading zone:", zoneId);
+    // TODO: Deduct funds and update the zone's health in your state/manager
+    setActiveZone(null); // Close the modal after upgrading
+  };
 
   const showLiquefactionAlert = waveProgress > 0.5 && gameState === GAME_STATES.PROPAGATING;
 
   return (
     <div className="relative w-full h-screen bg-black text-red-500 font-mono overflow-hidden selection:bg-red-900/30">
       
+      {/* 1. RENDER THE TACTICAL ZONE POPUP */}
+      {activeZone && (
+        <ZoneIntelModal 
+          zone={activeZone}
+          currentFunds={currentFunds}
+          onUpgrade={handleZoneUpgrade}
+          onClose={() => setActiveZone(null)}
+        />
+      )}
+
       {/* IMMERSION: CRT Scanline Overlay */}
       <div className="pointer-events-none absolute inset-0 z-50 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_4px,3px_100%] opacity-20 mix-blend-overlay" />
 
-      {/* Map Layer */}
+      {/* Map Layer (Swapped to Mapbox to support 3D and Zone Clicks) */}
       <div className="absolute inset-0 z-0 opacity-80 mix-blend-screen">
-        <MapLibreContainer
-          epicenter={epicenter} units={units} waveProgress={waveProgress}
-          gameState={gameState} onMapClick={handleMapClick} selectedUnitType={selectedUnitType}
+        <MapboxContainer
+          epicenter={epicenter} 
+          units={units} 
+          waveProgress={waveProgress}
+          gameState={gameState} 
+          onMapClick={handleMapClick} 
+          selectedUnitType={selectedUnitType}
+          simulationOutput={simulationOutput}
+          onZoneClick={setActiveZone} // Pass the state setter to the map!
         />
       </div>
 
@@ -57,7 +87,7 @@ export const GameMode = ({
 
       {/* Critical Risk Alert */}
       {showLiquefactionAlert && (
-        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="absolute top-32 left-1/2 -translate-x-1/2 z-30">
+        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="absolute top-32 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
           <div className="bg-black/95 backdrop-blur-md text-red-500 border border-red-600 px-8 py-4 flex items-center gap-4 shadow-[0_0_40px_rgba(220,38,38,0.6)]">
             <AlertTriangle className="w-8 h-8 animate-pulse text-red-500" />
             <div>
@@ -67,6 +97,7 @@ export const GameMode = ({
           </div>
         </motion.div>
       )}
+      
 
       {gameState === GAME_STATES.RESULTS && results && (
         <ResultsScreen results={results} onReset={onReturnToMenu} />
