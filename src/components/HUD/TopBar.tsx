@@ -117,17 +117,21 @@ export const TopBar = ({ gameState, countdown, magnitude, onReturnToMenu }: TopB
         {/* Left: Branding & Custom Logo */}
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-black border border-red-900/50 flex items-center justify-center shadow-[0_0_15px_rgba(220,38,38,0.2)] overflow-hidden">
+            <motion.button
+              onClick={onReturnToMenu}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.95 }}
+              className="w-10 h-10 bg-black border border-red-900/50 flex items-center justify-center shadow-[0_0_15px_rgba(220,38,38,0.2)] overflow-hidden cursor-pointer transition-all hover:shadow-[0_0_25px_rgba(220,38,38,0.6)]"
+            >
               <img 
                 src={logoImage} 
                 alt="Seismic Simulator Logo" 
                 className="w-full h-full object-cover opacity-90"
                 style={{
-                  // Optional: adds a slight red tint to your image to match the theme!
                   filter: 'drop-shadow(0px 0px 4px rgba(220,38,38,0.5))' 
                 }}
               />
-            </div>
+            </motion.button>
             <div>
               <motion.h1
                 className="text-lg font-bold tracking-[0.2em] text-red-500 cursor-pointer transition-all"

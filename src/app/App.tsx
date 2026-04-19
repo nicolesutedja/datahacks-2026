@@ -1,7 +1,7 @@
 import { useCallback, useState, useRef, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { AlertTriangle } from 'lucide-react';
-import rumbleSound from './rumble.wav';
+import rumbleSound from './11labs-earthquake-sound.mp3';
 import { useGameManager } from '../hooks/useGameManager';
 import { MapboxContainer } from '../components/Map/MapBoxContainer';
 import { TopBar } from '../components/HUD/TopBar';
