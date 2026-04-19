@@ -66,6 +66,10 @@ export default function App() {
     waveProgress,
     countdown,
     results,
+    currentFunds,
+    totalBudget,
+    maxUnits,
+    unitCosts,
     setMagnitude,
     setSelectedUnitType,
     startSimulation,
@@ -417,11 +421,28 @@ export default function App() {
       />
 
       <div className="absolute left-6 top-28 z-20">
-        <TasksPanel gameState={gameState} magnitude={magnitude} unitsDeployed={units.length} epicenterSet={Boolean(epicenter)} />
+      <TasksPanel
+        gameState={gameState}
+        magnitude={magnitude}
+        unitsDeployed={units.length}
+        epicenterSet={!!epicenter}
+        currentFunds={currentFunds}
+        totalBudget={totalBudget}
+        maxUnits={maxUnits}
+      />
       </div>
 
       <div className="pointer-events-none absolute bottom-0 left-0 right-0 z-20 flex justify-center">
-        <ResourceDock units={units} selectedUnitType={selectedUnitType} gameState={gameState} onSelectUnit={setSelectedUnitType} />
+      <ResourceDock
+        units={units}
+        selectedUnitType={selectedUnitType}
+        gameState={gameState}
+        currentFunds={currentFunds}
+        totalBudget={totalBudget}
+        maxUnits={maxUnits}
+        unitCosts={unitCosts}
+        onSelectUnit={setSelectedUnitType}
+      />
       </div>
 
       {showLiquefactionAlert && (

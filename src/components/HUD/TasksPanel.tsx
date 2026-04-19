@@ -14,10 +14,23 @@ interface TasksPanelProps {
   magnitude: number;
   unitsDeployed: number;
   epicenterSet: boolean;
+  currentFunds: number;
+  totalBudget: number;
+  maxUnits: number;
 }
 
-export const TasksPanel = ({ gameState, magnitude, unitsDeployed, epicenterSet }: TasksPanelProps) => {
+export const TasksPanel = ({
+  gameState,
+  magnitude,
+  unitsDeployed,
+  epicenterSet,
+  currentFunds,
+  totalBudget,
+  maxUnits,
+}: TasksPanelProps) => {
   const [isOpen, setIsOpen] = useState(false);
+
+  const budgetUsedPercent = Math.round(((totalBudget - currentFunds) / totalBudget) * 100);
 
   const getTasks = (): Task[] => {
     const tasks: Task[] = [];
@@ -27,28 +40,61 @@ export const TasksPanel = ({ gameState, magnitude, unitsDeployed, epicenterSet }
         id: '1',
         title: 'Lock epicenter on grid',
         status: epicenterSet ? 'completed' : 'in-progress',
-        priority: 'high'
+        priority: 'high',
       });
+
       tasks.push({
         id: '2',
-        title: 'Calibrate seismic magnitude',
+        title: `Set hazard level (current M${magnitude.toFixed(1)})`,
         status: magnitude !== 6.5 ? 'completed' : 'pending',
-        priority: 'medium'
+        priority: 'medium',
       });
+
       tasks.push({
         id: '3',
-        title: `Deploy response units (${unitsDeployed}/5)`,
-        status: unitsDeployed > 0 ? 'in-progress' : 'pending',
-        priority: 'high'
+        title: `Deploy at least 3 assets (${unitsDeployed}/3)`,
+        status:
+          unitsDeployed >= 3 ? 'completed' : unitsDeployed > 0 ? 'in-progress' : 'pending',
+        priority: 'high',
+      });
+
+      tasks.push({
+        id: '4',
+        title: `Use budget efficiently (${budgetUsedPercent}% used)`,
+        status:
+          budgetUsedPercent >= 55 && budgetUsedPercent <= 85
+            ? 'completed'
+            : budgetUsedPercent > 0
+            ? 'in-progress'
+            : 'pending',
+        priority: 'medium',
+      });
+
+      tasks.push({
+        id: '5',
+        title: `Reach deployment capacity (${unitsDeployed}/${maxUnits})`,
+        status:
+          unitsDeployed === maxUnits
+            ? 'completed'
+            : unitsDeployed >= 3
+            ? 'in-progress'
+            : 'pending',
+        priority: 'low',
       });
     }
 
     if (gameState === 'PROPAGATING') {
       tasks.push({
         id: '1',
-        title: 'Monitor wave velocity',
+        title: 'Monitor wave propagation',
         status: 'in-progress',
-        priority: 'high'
+        priority: 'high',
+      });
+      tasks.push({
+        id: '2',
+        title: 'Assess readiness before debrief',
+        status: 'in-progress',
+        priority: 'medium',
       });
     }
 
@@ -56,81 +102,75 @@ export const TasksPanel = ({ gameState, magnitude, unitsDeployed, epicenterSet }
   };
 
   const tasks = getTasks();
-  const completedCount = tasks.filter(t => t.status === 'completed').length;
+  const completedCount = tasks.filter((t) => t.status === 'completed').length;
+  const progress = tasks.length === 0 ? 0 : Math.round((completedCount / tasks.length) * 100);
 
   const getStatusIcon = (status: Task['status']) => {
     switch (status) {
       case 'completed':
-        return <CheckCircle2 className="w-4 h-4 text-green-500" />;
+        return <CheckCircle2 size={16} className="text-red-400" />;
       case 'in-progress':
-        return <AlertCircle className="w-4 h-4 text-red-500 animate-pulse" />;
+        return <AlertCircle size={16} className="text-amber-400" />;
       default:
-        return <Circle className="w-4 h-4 text-red-900" />;
+        return <Circle size={16} className="text-zinc-500" />;
     }
   };
 
   return (
-    <div className="absolute top-4 left-4 z-20 font-mono">
+    <div className="pointer-events-auto">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-3 bg-black/80 hover:bg-red-950/40 backdrop-blur-md border border-red-900/50 px-4 py-2 shadow-[0_0_15px_rgba(220,38,38,0.1)] transition-all"
+        className="flex items-center gap-3 border border-red-900/50 bg-black/80 px-4 py-2 backdrop-blur-md shadow-[0_0_15px_rgba(220,38,38,0.1)] transition-all hover:bg-red-950/40"
       >
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 bg-red-600 rounded-full animate-pulse shadow-[0_0_8px_rgba(220,38,38,1)]" />
-          <span className="text-xs font-bold tracking-widest text-red-500 uppercase">
-            Tasks {completedCount}/{tasks.length}
-          </span>
-        </div>
-        <motion.div animate={{ rotate: isOpen ? 180 : 0 }}>
-          <ChevronDown className="w-4 h-4 text-red-500/70" />
-        </motion.div>
+        <ChevronDown
+          size={16}
+          className={`text-red-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+        />
+        <span className="text-xs font-semibold uppercase tracking-[0.2em] text-red-300">
+          Tasks {completedCount}/{tasks.length}
+        </span>
       </button>
 
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ opacity: 0, y: -10 }}
+            initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="mt-2 w-80 bg-black/90 backdrop-blur-lg border border-red-900/50 shadow-[0_10px_30px_rgba(0,0,0,0.5)] overflow-hidden"
+            exit={{ opacity: 0, y: -8 }}
+            className="mt-3 w-80 rounded-2xl border border-red-900/50 bg-black/90 p-4 backdrop-blur-md"
           >
-            {/* Header */}
-            <div className="p-4 border-b border-red-900/30 bg-red-950/20">
-              <h3 className="text-xs font-bold tracking-[0.2em] text-red-500 uppercase">Mission Objectives</h3>
-            </div>
+            <h3 className="mb-4 text-sm font-semibold uppercase tracking-[0.22em] text-white">
+              Mission Objectives
+            </h3>
 
-            {/* Task List */}
-            <div className="p-2 max-h-96 overflow-y-auto">
+            <div className="space-y-3">
               {tasks.map((task) => (
-                <div key={task.id} className="p-3 mb-1 border border-transparent hover:border-red-900/30 hover:bg-red-950/10 transition-all">
-                  <div className="flex items-start gap-3">
-                    <div className="mt-0.5">{getStatusIcon(task.status)}</div>
-                    <div className="flex-1">
-                      <p className={`text-xs tracking-wide ${task.status === 'completed' ? 'line-through text-red-900' : 'text-red-100'}`}>
-                        {task.title.toUpperCase()}
-                      </p>
-                      <span className={`text-[9px] px-1.5 py-0.5 mt-2 inline-block border ${
-                        task.priority === 'high' ? 'border-red-600 text-red-500 bg-red-950/40' : 'border-red-900 text-red-700'
-                      }`}>
-                        {task.priority.toUpperCase()}
-                      </span>
+                <div
+                  key={task.id}
+                  className="flex items-start gap-3 rounded-xl border border-red-900/25 bg-red-950/10 p-3"
+                >
+                  <div className="mt-0.5">{getStatusIcon(task.status)}</div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-medium uppercase tracking-[0.06em] text-zinc-100">
+                      {task.title}
+                    </div>
+                    <div className="mt-1 text-[11px] uppercase tracking-[0.18em] text-red-400/80">
+                      {task.priority} priority
                     </div>
                   </div>
                 </div>
               ))}
             </div>
 
-            {/* Footer Progress */}
-            <div className="p-3 border-t border-red-900/30 bg-black/40">
-              <div className="flex items-center justify-between text-[10px] text-red-500/50 mb-2 tracking-widest">
-                <span>SYNC PROGRESS</span>
-                <span>{Math.round((completedCount / tasks.length) * 100)}%</span>
+            <div className="mt-4 rounded-xl border border-red-900/30 bg-red-950/20 p-3">
+              <div className="mb-2 flex items-center justify-between text-[11px] uppercase tracking-[0.2em] text-red-400">
+                <span>Mission Readiness</span>
+                <span>{progress}%</span>
               </div>
-              <div className="w-full bg-red-950/30 h-1">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${(completedCount / tasks.length) * 100}%` }}
-                  className="bg-red-600 h-full shadow-[0_0_8px_rgba(220,38,38,0.8)]"
+              <div className="h-2 overflow-hidden rounded-full bg-zinc-900">
+                <div
+                  className="h-full rounded-full bg-red-500 transition-all duration-300"
+                  style={{ width: `${progress}%` }}
                 />
               </div>
             </div>

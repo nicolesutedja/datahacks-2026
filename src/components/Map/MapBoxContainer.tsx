@@ -14,12 +14,31 @@ interface Unit {
   status: 'DEPLOYING' | 'ACTIVE';
 }
 
+interface SoilHeatmapFeatureCollection {
+  type: 'FeatureCollection';
+  features: Array<{
+    type: 'Feature';
+    geometry: {
+      type: 'Point';
+      coordinates: [number, number];
+    };
+    properties: {
+      vs30?: number;
+      soil_strength?: number;
+      soil_strength_label?: string;
+      soil_factor?: number;
+      site_class?: string;
+    };
+  }>;
+}
+
 interface SimulationOutput {
   waveform: number[][];
   max_amplitude: number;
   pgv: number[];
   risk_classes?: string[];
   confidence?: string;
+  soil_heatmap?: SoilHeatmapFeatureCollection;
 }
 
 interface MapboxContainerProps {
@@ -48,6 +67,11 @@ const WAVE_IDS = {
   sLine: 's-wave-line',
   surfaceFill: 'surface-wave-fill',
   surfaceLine: 'surface-wave-line',
+};
+
+const SOIL_IDS = {
+  source: 'soil-heatmap-source',
+  heatLayer: 'soil-heatmap-layer',
 };
 
 const RESOURCE_RADIUS_IDS = {
@@ -306,6 +330,66 @@ const ensureSimulationLayers = (map: mapboxgl.Map) => {
     });
   }
 
+  if (!map.getSource(SOIL_IDS.source)) {
+    map.addSource(SOIL_IDS.source, {
+      type: 'geojson',
+      data: EMPTY_FEATURE_COLLECTION,
+    });
+  }
+
+  if (!map.getLayer(SOIL_IDS.heatLayer)) {
+    map.addLayer({
+      id: SOIL_IDS.heatLayer,
+      type: 'heatmap',
+      source: SOIL_IDS.source,
+      paint: {
+        'heatmap-weight': [
+          'interpolate',
+          ['linear'],
+          ['coalesce', ['get', 'soil_strength'], 0],
+          0,
+          0.5,
+          1,
+          4.5,
+        ],
+        'heatmap-intensity': 3.8,
+        'heatmap-radius': [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          4,
+          24,
+          6,
+          34,
+          8,
+          48,
+          10,
+          62,
+        ],
+        'heatmap-opacity': 0.92,
+        'heatmap-color': [
+          'interpolate',
+          ['linear'],
+          ['heatmap-density'],
+          0,
+          'rgba(0,0,0,0)',
+          0.12,
+          'rgba(34,211,238,0.18)',
+          0.28,
+          'rgba(59,130,246,0.34)',
+          0.45,
+          'rgba(16,185,129,0.48)',
+          0.65,
+          'rgba(250,204,21,0.62)',
+          0.82,
+          'rgba(249,115,22,0.76)',
+          1,
+          'rgba(239,68,68,0.88)',
+        ],
+      },
+    });
+  }
+
   if (!map.getSource(RESOURCE_RADIUS_IDS.source)) {
     map.addSource(RESOURCE_RADIUS_IDS.source, {
       type: 'geojson',
@@ -511,6 +595,7 @@ export const MapboxContainer = ({
           WAVE_IDS.sLine,
           WAVE_IDS.surfaceFill,
           WAVE_IDS.surfaceLine,
+          SOIL_IDS.heatLayer,
         ],
         false
       );
@@ -620,6 +705,7 @@ export const MapboxContainer = ({
         WAVE_IDS.sLine,
         WAVE_IDS.surfaceFill,
         WAVE_IDS.surfaceLine,
+        SOIL_IDS.heatLayer,
       ],
       shouldShowSimulationLayers
     );
@@ -649,6 +735,9 @@ export const MapboxContainer = ({
     const surfaceSource = map.current.getSource(
       WAVE_IDS.surfaceSource
     ) as mapboxgl.GeoJSONSource;
+    const soilSource = map.current.getSource(
+      SOIL_IDS.source
+    ) as mapboxgl.GeoJSONSource;
 
     pSource?.setData(
       createGeoJSONCircle([epicenter.lng, epicenter.lat], Math.max(pRadiusMeters, 1)) as any
@@ -661,6 +750,10 @@ export const MapboxContainer = ({
         [epicenter.lng, epicenter.lat],
         Math.max(surfaceRadiusMeters, 1)
       ) as any
+    );
+
+    soilSource?.setData(
+      (simulationOutput?.soil_heatmap ?? EMPTY_FEATURE_COLLECTION) as any
     );
 
     map.current.setPaintProperty(

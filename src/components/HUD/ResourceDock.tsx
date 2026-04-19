@@ -1,6 +1,14 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Ambulance, Flame, Building2, DollarSign, ChevronDown, ChevronUp } from 'lucide-react';
+import {
+  Ambulance,
+  Flame,
+  Building2,
+  DollarSign,
+  ChevronDown,
+  ChevronUp,
+  Lock,
+} from 'lucide-react';
 
 interface Unit {
   id: number;
@@ -13,6 +21,10 @@ interface ResourceDockProps {
   units: Unit[];
   selectedUnitType: Unit['type'] | null;
   gameState: string;
+  currentFunds: number;
+  totalBudget: number;
+  maxUnits: number;
+  unitCosts: Record<Unit['type'], number>;
   onSelectUnit: (type: Unit['type']) => void;
 }
 
@@ -20,196 +32,189 @@ const RESOURCE_CONFIG = [
   {
     type: 'ambulance' as const,
     label: 'Medical',
-    description: 'Emergency response',
-    icon: Ambulance
+    description: 'Fast response and casualty stabilization',
+    icon: Ambulance,
   },
   {
     type: 'fire' as const,
     label: 'Fire & Rescue',
-    description: 'Structural integrity',
-    icon: Flame
+    description: 'Structural rescue and hazard control',
+    icon: Flame,
   },
   {
     type: 'hospital' as const,
     label: 'Field Hospital',
-    description: 'Mass casualty prep',
-    icon: Building2
-  }
+    description: 'High-capacity treatment and surge support',
+    icon: Building2,
+  },
 ];
 
 export const ResourceDock = ({
   units,
   selectedUnitType,
   gameState,
-  onSelectUnit
+  currentFunds,
+  totalBudget,
+  maxUnits,
+  unitCosts,
+  onSelectUnit,
 }: ResourceDockProps) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const maxUnits = 5;
+
   const canDeploy = gameState === 'SETUP' || gameState === 'PROPAGATING';
+  const spentBudget = totalBudget - currentFunds;
+  const budgetUsedPercent = Math.round((spentBudget / totalBudget) * 100);
 
-  // --- BUDGET LOGIC ---
-  const TOTAL_BUDGET = 10000000;
-  const UNIT_COST = 2000000;
-  const currentFunds = TOTAL_BUDGET - (units.length * UNIT_COST);
-
-  const formatMoney = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
+  const formatMoney = (amount: number) =>
+    new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
-      maximumFractionDigits: 0
+      maximumFractionDigits: 0,
     }).format(amount);
-  };
 
-  const getUnitCount = (type: Unit['type']) => {
-    return units.filter(u => u.type === type).length;
-  };
+  const getUnitCount = (type: Unit['type']) => units.filter((u) => u.type === type).length;
 
   return (
-    <motion.div
-      initial={{ y: 100 }}
-      // When collapsed, drop it down by 100% minus the height of the tab (28px)
-      animate={{ y: isCollapsed ? 'calc(100% - 28px)' : 0 }}
-      transition={{ type: 'spring', bounce: 0, duration: 0.4 }}
-      // z-30 ensures it sits OVER the sidebar
-      className="absolute bottom-0 left-0 right-0 z-30 flex flex-col items-center pointer-events-none font-mono"
-    >
-      {/* --- TUCK AWAY TAB --- */}
-      <button
-        onClick={() => setIsCollapsed(!isCollapsed)}
-        className="pointer-events-auto bg-black/95 border-t border-l border-r border-red-900/50 text-red-500 hover:text-red-400 hover:bg-red-950/50 px-8 py-1 rounded-t-lg backdrop-blur-md transition-all flex items-center justify-center gap-3 shadow-[0_-5px_15px_rgba(220,38,38,0.15)] cursor-pointer"
-      >
-        {isCollapsed ? (
-          <>
-            <ChevronUp className="w-4 h-4" />
-            <span className="text-[10px] uppercase font-bold tracking-widest">Deploy Assets</span>
-            <ChevronUp className="w-4 h-4" />
-          </>
-        ) : (
-          <ChevronDown className="w-4 h-4 opacity-70 hover:opacity-100" />
-        )}
-      </button>
+    <div className="pointer-events-none fixed bottom-0 left-1/2 z-40 w-full max-w-5xl -translate-x-1/2 px-4">
+      <div className="flex justify-center">
+        <button
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          className="pointer-events-auto flex items-center gap-3 rounded-t-lg border border-b-0 border-red-900/50 bg-black/95 px-8 py-2 text-red-500 shadow-[0_-5px_15px_rgba(220,38,38,0.15)] transition-all hover:bg-red-950/50 hover:text-red-400"
+        >
+          {isCollapsed ? (
+            <>
+              <ChevronUp size={16} />
+              <span className="text-sm font-semibold uppercase tracking-[0.2em]">
+                Deploy Assets
+              </span>
+            </>
+          ) : (
+            <>
+              <ChevronDown size={16} />
+              <span className="text-sm font-semibold uppercase tracking-[0.2em]">
+                Minimize Dock
+              </span>
+            </>
+          )}
+        </button>
+      </div>
 
-      {/* --- MAIN DOCK CONTENT --- */}
-      <div className="pointer-events-auto w-full bg-black/95 backdrop-blur-md border-t border-red-900/50 shadow-[0_-10px_30px_rgba(220,38,38,0.2)]">
-        <div className="px-6 py-4">
-          
-          {/* Header & Budget */}
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-6">
+      <AnimatePresence>
+        {!isCollapsed && (
+          <motion.div
+            initial={{ y: 40, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 40, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="pointer-events-auto rounded-t-2xl border border-red-900/50 bg-black/95 p-5 backdrop-blur-md"
+          >
+            <div className="mb-4 flex flex-col gap-4 border-b border-red-900/40 pb-4 md:flex-row md:items-center md:justify-between">
               <div>
-                <h3 className="text-sm font-bold tracking-[0.2em] text-red-500 uppercase">
+                <p className="text-xs uppercase tracking-[0.28em] text-red-500/70">
                   Tactical Deployment
-                </h3>
-                <p className="text-[10px] tracking-widest text-red-500/50 uppercase mt-0.5">
-                  Assets Deployed: {units.length}/{maxUnits}
                 </p>
+                <h3 className="mt-1 text-lg font-semibold text-white">
+                  Assets Deployed: {units.length}/{maxUnits}
+                </h3>
               </div>
-              
-              <div className="px-4 py-1.5 bg-red-950/30 border border-red-900/50 flex items-center gap-2">
-                <DollarSign className="w-3 h-3 text-red-500" />
-                <div className="flex flex-col">
-                  <span className="text-[8px] text-red-500/50 tracking-widest uppercase">Available Funds</span>
-                  <span className="text-sm font-bold text-red-400 tracking-wider">
-                    {formatMoney(currentFunds)}
-                  </span>
+
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <div className="rounded-xl border border-red-900/40 bg-red-950/20 px-4 py-3">
+                  <div className="mb-1 flex items-center gap-2 text-xs uppercase tracking-[0.22em] text-red-400">
+                    <DollarSign size={14} />
+                    Available Funds
+                  </div>
+                  <div className="text-lg font-semibold text-white">{formatMoney(currentFunds)}</div>
+                </div>
+
+                <div className="rounded-xl border border-red-900/40 bg-red-950/20 px-4 py-3">
+                  <div className="mb-1 flex items-center justify-between text-xs uppercase tracking-[0.22em] text-red-400">
+                    <span>Budget Used</span>
+                    <span>{budgetUsedPercent}%</span>
+                  </div>
+                  <div className="h-2 overflow-hidden rounded-full bg-zinc-900">
+                    <div
+                      className="h-full rounded-full bg-red-500 transition-all duration-300"
+                      style={{ width: `${budgetUsedPercent}%` }}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Unit Status Dots */}
-            <div className="flex gap-2">
+            <div className="mb-4 flex gap-2">
               {[...Array(maxUnits)].map((_, i) => {
                 const unit = units[i];
                 return (
                   <div
                     key={i}
-                    className={`
-                      w-2 h-2 rounded-full transition-all border
-                      ${unit
+                    className={`h-2 flex-1 rounded-full ${
+                      unit
                         ? unit.status === 'ACTIVE'
-                          ? 'bg-red-500 border-red-400 shadow-[0_0_10px_rgba(220,38,38,0.8)]'
-                          : 'bg-red-800 border-red-600 animate-pulse'
-                        : 'bg-black border-red-900/50'
-                      }
-                    `}
+                          ? 'bg-red-500'
+                          : 'bg-amber-400'
+                        : 'bg-zinc-800'
+                    }`}
                   />
                 );
               })}
             </div>
-          </div>
 
-          {/* Resource Cards */}
-          <div className="grid grid-cols-3 gap-4">
-            {RESOURCE_CONFIG.map((resource) => {
-              const count = getUnitCount(resource.type);
-              const isSelected = selectedUnitType === resource.type;
-              const isDisabled = !canDeploy || units.length >= maxUnits;
-              const Icon = resource.icon;
+            <div className="grid gap-3 md:grid-cols-3">
+              {RESOURCE_CONFIG.map((resource) => {
+                const count = getUnitCount(resource.type);
+                const isSelected = selectedUnitType === resource.type;
+                const isAffordable = currentFunds >= unitCosts[resource.type];
+                const isDisabled = !canDeploy || units.length >= maxUnits || !isAffordable;
+                const Icon = resource.icon;
 
-              return (
-                <button
-                  key={resource.type}
-                  onClick={() => onSelectUnit(resource.type)}
-                  disabled={isDisabled}
-                  className={`
-                    relative p-4 border transition-all duration-200 text-left flex flex-col
-                    ${isDisabled ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer hover:bg-red-950/40 hover:border-red-500'}
-                    ${isSelected 
-                      ? 'bg-red-600 border-red-400 text-black shadow-[0_0_20px_rgba(220,38,38,0.4)]' 
-                      : 'bg-black border-red-900/50 text-red-500'
-                    }
-                  `}
-                >
-                  <div className="flex items-start justify-between mb-3">
-                    <Icon className={`w-5 h-5 ${isSelected ? 'text-black' : 'text-red-500'}`} />
-                    <span className={`text-[10px] font-bold px-2 py-0.5 border tracking-widest
-                      ${isSelected 
-                        ? 'bg-black text-red-500 border-black' 
-                        : 'bg-red-950/50 text-red-500 border-red-900/50'
-                      }`}
-                    >
-                      QTY: {count}
-                    </span>
-                  </div>
+                return (
+                  <button
+                    key={resource.type}
+                    onClick={() => onSelectUnit(resource.type)}
+                    disabled={isDisabled}
+                    className={`relative rounded-2xl border p-4 text-left transition-all duration-200 ${
+                      isDisabled
+                        ? 'cursor-not-allowed border-zinc-800 bg-zinc-950/80 opacity-45'
+                        : isSelected
+                        ? 'border-red-300 bg-red-600 text-black shadow-[0_0_24px_rgba(220,38,38,0.35)]'
+                        : 'border-red-900/50 bg-black text-red-500 hover:border-red-500 hover:bg-red-950/30'
+                    }`}
+                  >
+                    <div className="mb-3 flex items-start justify-between">
+                      <div className="rounded-xl border border-current/20 p-2">
+                        <Icon size={22} />
+                      </div>
+                      <div className="text-xs font-semibold uppercase tracking-[0.2em]">
+                        QTY: {count}
+                      </div>
+                    </div>
 
-                  <div>
-                    <p className="text-xs font-bold uppercase tracking-widest mb-0.5">
-                      {resource.label}
-                    </p>
-                    <p className={`text-[9px] uppercase tracking-widest ${isSelected ? 'text-black/70' : 'text-red-500/50'}`}>
-                      {resource.description}
-                    </p>
-                  </div>
-                  
-                  {/* Cost Tag */}
-                  <div className={`absolute bottom-2 right-3 text-[8px] font-bold tracking-widest ${isSelected ? 'text-black/60' : 'text-red-500/40'}`}>
-                    COST: {formatMoney(UNIT_COST)}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
+                    <div className="mb-1 text-base font-semibold">{resource.label}</div>
+                    <div className="mb-4 text-sm opacity-80">{resource.description}</div>
 
-          {/* Selection Hint */}
-          <AnimatePresence>
+                    <div className="flex items-center justify-between text-xs uppercase tracking-[0.18em]">
+                      <span>Cost: {formatMoney(unitCosts[resource.type])}</span>
+                      {!isAffordable && (
+                        <span className="flex items-center gap-1 text-amber-300">
+                          <Lock size={12} />
+                          Locked
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
             {selectedUnitType && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="mt-4 overflow-hidden"
-              >
-                <div className="p-2 bg-red-950/80 border border-red-500 shadow-[0_0_15px_rgba(220,38,38,0.3)]">
-                  <p className="text-xs text-red-400 font-bold tracking-[0.2em] uppercase text-center flex items-center justify-center gap-2">
-                    <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
-                    Select Target Sector on Map for Deployment
-                  </p>
-                </div>
-              </motion.div>
+              <div className="mt-4 rounded-xl border border-red-900/40 bg-red-950/20 px-4 py-3 text-center text-sm uppercase tracking-[0.2em] text-red-300">
+                Select target sector on map for deployment
+              </div>
             )}
-          </AnimatePresence>
-        </div>
-      </div>
-    </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 };
