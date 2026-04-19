@@ -105,17 +105,6 @@ export const Sidebar = ({
               Run Simulation
             </button>
           )}
-
-          {gameState !== 'SETUP' && (
-            <button
-              onClick={onReset}
-              className="w-full flex items-center justify-center gap-2 py-4 bg-black/50 hover:bg-red-950/30 border border-red-900/50 text-red-500/80
-                       font-bold tracking-widest text-xs uppercase transition-colors"
-            >
-              <RotateCcw className="w-4 h-4" />
-              Reset System
-            </button>
-          )}
         </div>
 
         {/* Terminal Analytics */}

@@ -12,10 +12,11 @@ interface Results {
 interface ResultsScreenProps {
   results: Results;
   onReset: () => void;
+  onResetSimulation?: () => void;
   onViewSimulation?: () => void;
 }
 
-export const ResultsScreen = ({ results, onReset, onViewSimulation }: ResultsScreenProps) => {
+export const ResultsScreen = ({ results, onReset, onResetSimulation, onViewSimulation }: ResultsScreenProps) => {
   const getGrade = () => {
     const avgScore = (results.resourceEfficiency + results.predictionAccuracy) / 2;
     // Tactical Grade Colors: S is glowing white, A is bright red, lower grades fade out
@@ -225,24 +226,36 @@ export const ResultsScreen = ({ results, onReset, onViewSimulation }: ResultsScr
           </motion.div>
 
           {/* Action Buttons */}
-          <div className="flex gap-3">
-            {onViewSimulation && (
+          <div className="flex gap-3 flex-col">
+            <div className="flex gap-3">
+              {onViewSimulation && (
+                <button
+                  onClick={onViewSimulation}
+                  className="flex-1 flex items-center justify-center gap-3 py-4 bg-orange-600/10 hover:bg-orange-600/20 border border-orange-600 text-orange-400
+                           font-bold tracking-widest text-xs uppercase transition-all shadow-[0_0_15px_rgba(251,146,60,0.2)] hover:shadow-[0_0_25px_rgba(251,146,60,0.4)]"
+                >
+                  <span>Explore Simulation</span>
+                </button>
+              )}
               <button
-                onClick={onViewSimulation}
-                className="flex-1 flex items-center justify-center gap-3 py-4 bg-orange-600/10 hover:bg-orange-600/20 border border-orange-600 text-orange-400
+                onClick={onReset}
+                className="flex-1 flex items-center justify-center gap-3 py-4 bg-yellow-600/10 hover:bg-yellow-600/20 border border-yellow-600 text-yellow-400
                          font-bold tracking-widest text-xs uppercase transition-all shadow-[0_0_15px_rgba(251,146,60,0.2)] hover:shadow-[0_0_25px_rgba(251,146,60,0.4)]"
               >
-                <span>Explore Simulation</span>
+                <RotateCcw className="w-4 h-4" />
+                Return to Menu
+              </button>
+            </div>
+            {onResetSimulation && (
+              <button
+                onClick={onResetSimulation}
+                className="w-full flex items-center justify-center gap-3 py-4 bg-green-600/10 hover:bg-green-600/20 border border-green-600 text-green-400
+                         font-bold tracking-widest text-xs uppercase transition-all shadow-[0_0_15px_rgba(34,197,189,0.2)] hover:shadow-[0_0_25px_rgba(34,197,189,0.4)]"
+              >
+                <RotateCcw className="w-4 h-4" />
+                New Simulation
               </button>
             )}
-            <button
-              onClick={onReset}
-              className="flex-1 flex items-center justify-center gap-3 py-4 bg-yellow-600/10 hover:bg-yellow-600/20 border border-yellow-600 text-yellow-400
-                       font-bold tracking-widest text-xs uppercase transition-all shadow-[0_0_15px_rgba(251,146,60,0.2)] hover:shadow-[0_0_25px_rgba(251,146,60,0.4)]"
-            >
-              <RotateCcw className="w-4 h-4" />
-              Return to Menu
-            </button>
           </div>
         </div>
       </motion.div>
