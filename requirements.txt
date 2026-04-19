@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+python-dotenv
+requests
+google-generativeai
+scikit-learn
+joblib
+numpy
+pandas
+scipy
+rasterio
