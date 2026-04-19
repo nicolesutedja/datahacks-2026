@@ -28,3 +28,5 @@ API_SETUP.md
 
 .DS_Store
 **/.DS_Store
+
+__pycache__/

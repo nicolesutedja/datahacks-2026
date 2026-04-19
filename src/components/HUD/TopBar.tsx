@@ -35,7 +35,7 @@ export const TopBar = ({ gameState, countdown, magnitude, onReturnToMenu }: TopB
         return {
           label: 'STANDBY',
           color: 'text-red-600 dark:text-red-400',
-          bgColor: 'bg-gray-100 dark:bg-red-950/20',
+          bgColor: 'bg-orange-400 dark:bg-red-950/20',
           borderColor: 'border-gray-300 dark:border-red-900/30',
           icon: Activity,
         };
@@ -43,15 +43,16 @@ export const TopBar = ({ gameState, countdown, magnitude, onReturnToMenu }: TopB
         return {
            label: 'ACTIVE RUPTURE',
           color: 'text-red-700 dark:text-red-500',
-          bgColor: 'bg-red-100 dark:bg-red-900/40',
+          bgColor: 'bg-red-300 dark:bg-red-900/40',
           borderColor: 'border-red-300 dark:border-red-500',
           icon: Waves,
         };
       case 'RESULTS':
         return {
-         color: 'text-amber-600 dark:text-amber-400',
-          bgColor: 'bg-amber-100 dark:bg-amber-950/30',
-          borderColor: 'border-amber-300 dark:border-amber-900/50',
+          label: 'EXPLORING RESULTS',
+          color: 'text-red-600 dark:text-red-400',
+          bgColor: 'bg-yellow-500 dark:bg-red-950/20',
+          borderColor: 'border-gray-300 dark:border-red-900/30',
           icon: Activity,
         };
       default:

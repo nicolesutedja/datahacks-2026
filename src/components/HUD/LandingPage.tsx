@@ -4,11 +4,16 @@ import { SeismicBackground } from './SeismicBackground';
 import { PulseButton } from './PulseButton';
 import { MissionBriefingModal } from './MissionBriefing';
 import logoImage from '../ui/logo.png';
-import { X, Settings, Info, Activity, ShieldCheck, Mouse } from 'lucide-react';
+import { X, Settings, Info, Activity, ShieldCheck, Mouse, Volume2, Mic } from 'lucide-react';
 
 interface LandingPageProps {
   onStartScenario: () => void;
   onSandboxMode: () => void;
+  // Added props for global audio control
+  isMusicMuted: boolean;
+  toggleMusic: () => void;
+  isSfxMuted: boolean;
+  toggleSfx: () => void;
 }
 
 const CONTROLS = [
@@ -30,11 +35,17 @@ const CONTROLS = [
   },
 ];
 
-export const LandingPage = ({ onStartScenario, onSandboxMode }: LandingPageProps) => {
+export const LandingPage = ({ 
+  onStartScenario, 
+  onSandboxMode,
+  isMusicMuted,
+  toggleMusic,
+  isSfxMuted,
+  toggleSfx
+}: LandingPageProps) => {
   const [showAbout, setShowAbout] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showBriefing, setShowBriefing] = useState(false);
-  const [soundOn, setSoundOn] = useState(true);
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -76,6 +87,7 @@ export const LandingPage = ({ onStartScenario, onSandboxMode }: LandingPageProps
               onStartScenario();
             }}
             onClose={() => setShowBriefing(false)}
+            isSfxMuted={isSfxMuted}
           />
         )}
       </AnimatePresence>
@@ -134,28 +146,61 @@ export const LandingPage = ({ onStartScenario, onSandboxMode }: LandingPageProps
               ) : (
                 <div className="space-y-6">
 
-                  {/* Audio */}
-                  <div className="flex justify-between items-center pb-5 border-b border-red-900/20">
-                    <span
-                      className="text-sm uppercase tracking-wider text-red-500"
-                      style={{ fontFamily: 'Orbitron, sans-serif' }}
-                    >
-                      Audio Feedback
-                    </span>
-                    <button
-                      onClick={() => setSoundOn(!soundOn)}
-                      className={`px-4 py-2 text-xs font-bold transition-colors ${
-                        soundOn
-                          ? 'bg-black text-red-500 border border-red-500'
-                          : 'bg-red-500 text-black border border-red-500'
-                      }`}
-                    >
-                      {soundOn ? 'ACTIVE' : 'MUTED'}
-                    </button>
+                  {/* Settings: Audio Group */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Volume2 className="w-3.5 h-3.5 text-red-500/50" />
+                      <span
+                        className="text-[10px] uppercase tracking-widest text-red-500/50 font-bold"
+                        style={{ fontFamily: 'Orbitron, sans-serif' }}
+                      >
+                        Audio Configuration
+                      </span>
+                    </div>
+
+                    {/* Background Music Toggle */}
+                    <div className="flex justify-between items-center pb-3 border-b border-red-900/20">
+                      <span
+                        className="text-sm uppercase tracking-wider text-red-400"
+                        style={{ fontFamily: 'Orbitron, sans-serif' }}
+                      >
+                        Background Music
+                      </span>
+                      <button
+                        onClick={toggleMusic}
+                        className={`px-4 py-2 text-xs font-bold tracking-widest transition-colors ${
+                          !isMusicMuted
+                            ? 'bg-black text-red-500 border border-red-500 hover:bg-red-500/10'
+                            : 'bg-red-900/40 text-red-500/50 border border-red-900/50'
+                        }`}
+                      >
+                        {isMusicMuted ? 'MUTED' : 'ACTIVE'}
+                      </button>
+                    </div>
+
+                    {/* SFX / Voice Toggle */}
+                    <div className="flex justify-between items-center pb-4">
+                      <span
+                        className="text-sm uppercase tracking-wider text-red-400"
+                        style={{ fontFamily: 'Orbitron, sans-serif' }}
+                      >
+                        Voice & SFX
+                      </span>
+                      <button
+                        onClick={toggleSfx}
+                        className={`px-4 py-2 text-xs font-bold tracking-widest transition-colors ${
+                          !isSfxMuted
+                            ? 'bg-black text-red-500 border border-red-500 hover:bg-red-500/10'
+                            : 'bg-red-900/40 text-red-500/50 border border-red-900/50'
+                        }`}
+                      >
+                        {isSfxMuted ? 'MUTED' : 'ACTIVE'}
+                      </button>
+                    </div>
                   </div>
 
-                  {/* Controls */}
-                  <div>
+                  {/* Settings: Controls Group */}
+                  <div className="pt-2 border-t border-red-900/50">
                     <div className="flex items-center gap-2 mb-3">
                       <Mouse className="w-3.5 h-3.5 text-red-500/50" />
                       <span
