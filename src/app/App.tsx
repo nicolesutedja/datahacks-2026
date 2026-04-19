@@ -174,17 +174,6 @@ export default function App() {
         </div>
       </div>
 
-      {/* Map Controls Hint (Visible only during setup) */}
-      {gameState === GAME_STATES.SETUP && (
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="absolute bottom-32 right-80 mr-6 z-10 bg-slate-900/80 backdrop-blur-sm px-4 py-2 rounded-lg border border-slate-700 text-xs text-slate-400 pointer-events-none"
-        >
-          Right-Click + Drag map to tilt/rotate
-        </motion.div>
-      )}
-
       {/* High Risk Alert */}
       {showLiquefactionAlert && (
         <motion.div
