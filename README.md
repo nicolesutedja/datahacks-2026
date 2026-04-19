@@ -56,6 +56,14 @@ npm run dev
 
 ---
 
+## 🌊 Data (Scripps)
+
+- **Direct Use of Scripps Seismic Data:** TECHTonic is built on a high-resolution earthquake simulation dataset from the Scripps Institution of Oceanography (Rekoske et al., 2025), which provides velocity seismograms recorded across multiple receivers for hundreds of earthquake source locations.
+- **Learning Spatial Earthquake Behavior:** We use the dataset’s source location data and corresponding waveforms to understand how seismic waves change across geography. This allows our system to generalize how earthquakes propagate in different regions, rather than relying on fixed or pre-scripted patterns.
+- **Interpolating Between Real Data Points:** Instead of treating the dataset as static samples, we use it to interpolate between known earthquake scenarios. This means when a user selects a new epicenter, the simulation generates behavior that is consistent with patterns learned directly from the Scripps data.
+- **Reconstructing Realistic Waveforms:** The dataset’s seismograms are used as the foundation for reconstructing full wave signals at new locations, ensuring that the simulated waves users see are grounded in real physical patterns observed in the original data.
+- **Driving Impact and Risk Metrics:** All downstream calculations—such as Peak Ground Velocity (PGV), hazard zones, and damage estimates—are derived from the dataset-informed wave outputs. This ensures that gameplay outcomes reflect realistic seismic behavior encoded in the Scripps data.
+
 ## 🧗 Challenges We Faced
 One of our biggest challenges was collaboration. With multiple team members working simultaneously, we encountered frequent Git merge conflicts. This forced us to improve our communication and coordinate more effectively as a team.
 
