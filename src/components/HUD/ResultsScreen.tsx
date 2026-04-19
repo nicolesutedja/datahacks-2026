@@ -229,16 +229,16 @@ export const ResultsScreen = ({ results, onReset, onViewSimulation }: ResultsScr
             {onViewSimulation && (
               <button
                 onClick={onViewSimulation}
-                className="flex-1 flex items-center justify-center gap-3 py-4 bg-blue-600/10 hover:bg-blue-600/20 border border-blue-600 text-blue-400
-                         font-bold tracking-widest text-xs uppercase transition-all shadow-[0_0_15px_rgba(59,130,246,0.2)] hover:shadow-[0_0_25px_rgba(59,130,246,0.4)]"
+                className="flex-1 flex items-center justify-center gap-3 py-4 bg-orange-600/10 hover:bg-orange-600/20 border border-orange-600 text-orange-400
+                         font-bold tracking-widest text-xs uppercase transition-all shadow-[0_0_15px_rgba(251,146,60,0.2)] hover:shadow-[0_0_25px_rgba(251,146,60,0.4)]"
               >
                 <span>Explore Simulation</span>
               </button>
             )}
             <button
               onClick={onReset}
-              className="flex-1 flex items-center justify-center gap-3 py-4 bg-red-600/10 hover:bg-red-600/20 border border-red-600 text-red-500
-                       font-bold tracking-widest text-xs uppercase transition-all shadow-[0_0_15px_rgba(220,38,38,0.2)] hover:shadow-[0_0_25px_rgba(220,38,38,0.4)]"
+              className="flex-1 flex items-center justify-center gap-3 py-4 bg-yellow-600/10 hover:bg-yellow-600/20 border border-yellow-600 text-yellow-400
+                       font-bold tracking-widest text-xs uppercase transition-all shadow-[0_0_15px_rgba(251,146,60,0.2)] hover:shadow-[0_0_25px_rgba(251,146,60,0.4)]"
             >
               <RotateCcw className="w-4 h-4" />
               Return to Menu
