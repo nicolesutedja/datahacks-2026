@@ -85,7 +85,10 @@ export default function App() {
   const [showResultsModal, setShowResultsModal] = useState(false);
   const [regionInsight, setRegionInsight] = useState<RegionInsight | null>(null);
   const [showRegionPopup, setShowRegionPopup] = useState(false);
-  const [regionInsightLoading, setRegionInsightLoading] = useState(false);
+  const [regionInsightLoading, setRegionInsightLoading] = useState(false);  
+  // ADD THESE TWO LINES:
+  const [exploredZones, setExploredZones] = useState<Set<string>>(new Set());
+  const [showBriefing, setShowBriefing] = useState(false);
 
   const {
     gameState,
@@ -208,6 +211,12 @@ export default function App() {
 
   const handleRegionInsightClick = useCallback(
     async (lat: number, lng: number) => {
+      setExploredZones((prev) => {
+        const newSet = new Set(prev);
+        newSet.add(`${lat.toFixed(3)},${lng.toFixed(3)}`);
+        return newSet;
+      });
+
       const apiBase = import.meta.env.VITE_SEISMIC_API_URL?.trim() || 'http://localhost:8000';
 
       try {
@@ -290,6 +299,8 @@ export default function App() {
     setShowRegionPopup(false);
     setGameSubtype('SCENARIO');
     setAppMode('GAME');
+    setShowBriefing(false); //BRIEFING
+    setExploredZones(new Set()); // Reset the task progress
   
     const SOCAL_POINTS = [
       { lat: 34.05, lng: -118.25 },
@@ -397,13 +408,6 @@ export default function App() {
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-black text-white font-mono">
       
-      {/* Global Mute Toggle for convenience */}
-      <button
-        onClick={toggleMusic}
-        className="pointer-events-auto absolute bottom-6 left-6 z-50 flex h-10 w-10 items-center justify-center border border-zinc-800 bg-black/80 text-zinc-400 backdrop-blur-md transition-all hover:border-cyan-500 hover:text-cyan-400"
-      >
-        {isMusicMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
-      </button>
 
       <MapboxContainer
         epicenter={epicenter}
@@ -440,6 +444,7 @@ export default function App() {
         currentFunds={currentFunds}
         totalBudget={totalBudget}
         maxUnits={maxUnits}
+        exploredZonesCount={exploredZones.size} // <--- ADD THIS LINE
       />
       </div>
 
@@ -471,7 +476,7 @@ export default function App() {
       )}
 
       {showRegionPopup && (
-        <div className="pointer-events-auto absolute left-6 bottom-70 z-40 w-[24rem] border border-green-400/40 bg-black/90 p-4 shadow-[0_0_20px_rgba(34,211,238,0.15)] backdrop-blur-md">
+        <div className="pointer-events-auto absolute left-6 bottom-8 z-40 w-[24rem] border border-green-400/40 bg-black/90 p-4 shadow-[0_0_20px_rgba(34,211,238,0.15)] backdrop-blur-md">
           <div className="mb-3 flex items-start justify-between">
             <div>
               <div className="text-[10px] uppercase tracking-[0.24em] text-green-400/80">Region Analysis</div>

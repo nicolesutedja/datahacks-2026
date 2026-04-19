@@ -14,10 +14,25 @@ export const GameMode = ({
   simulationOutput, handleRegionInsightClick
 }: any) => {
 
-  const [activeZone, setActiveZone] = useState<any | null>(null);
-  // Controls the pre-game briefing
   const [showBriefing, setShowBriefing] = useState(true);
   
+  // NEW: Track unique scanned zones using a Set of coordinate strings
+  const [exploredZones, setExploredZones] = useState<Set<string>>(new Set());
+
+  // Intercept the Gemini Scanner click to also update our task progress
+  const onInsightClick = (lat: number, lng: number) => {
+    setExploredZones((prev) => {
+      const newSet = new Set(prev);
+      newSet.add(`${lat.toFixed(3)},${lng.toFixed(3)}`);
+      return newSet;
+    });
+    
+    // Call the original function to open the Gemini modal
+    if (handleRegionInsightClick) {
+      handleRegionInsightClick(lat, lng);
+    }
+  };
+
   const showLiquefactionAlert = waveProgress > 0.5 && gameState === GAME_STATES.PROPAGATING;
 
   return (
@@ -89,10 +104,10 @@ export const GameMode = ({
           waveProgress={waveProgress}
           gameState={gameState} 
           onMapClick={handleMapClick} 
-          onRegionInsightClick={handleRegionInsightClick}
+          onRegionInsightClick={onInsightClick} // <--- UPDATED HERE
           selectedUnitType={selectedUnitType}
           simulationOutput={simulationOutput}
-          onZoneClick={setActiveZone}
+          onZoneClick={() => {}}
         />
       </div>
 
@@ -112,7 +127,13 @@ export const GameMode = ({
 
       <div className="absolute top-20 left-0 z-20 pointer-events-none">
         <div className="pointer-events-auto relative">
-          <TasksPanel gameState={gameState} magnitude={magnitude} unitsDeployed={units.length} epicenterSet={!!epicenter} />
+          <TasksPanel 
+            gameState={gameState} 
+            magnitude={magnitude} 
+            unitsDeployed={units.length} 
+            epicenterSet={!!epicenter} 
+            exploredZonesCount={exploredZones.size} // <--- UPDATED HERE
+          />
         </div>
       </div>
 
