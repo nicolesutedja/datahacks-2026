@@ -18,6 +18,8 @@ interface SimulationOutput {
   waveform: number[][];
   max_amplitude: number;
   pgv: number[];
+  risk_classes?: string[];
+  confidence?: string;
 }
 
 interface MapboxContainerProps {
@@ -214,7 +216,8 @@ const buildResourceRadiusData = (units: Unit[]) => {
 
 const buildHotspotData = (
   epicenter: Position,
-  pgv: number[],
+  pgv: number[] = [],
+  riskClasses: string[] = [],
   waveProgress: number
 ) => {
   const usablePgv = pgv.length > 0 ? pgv : Array.from({ length: 16 }, () => 0);
@@ -235,8 +238,7 @@ const buildHotspotData = (
       animatedRadiusMeters
     );
 
-    const pulse =
-      0.6 + 0.4 * Math.sin(waveProgress * Math.PI * 10 + index * 0.65);
+    const pulse = 0.8;
 
     return {
       type: 'Feature' as const,
@@ -245,6 +247,7 @@ const buildHotspotData = (
         pgv: value,
         intensity: normalized,
         pulse,
+        risk: riskClasses[index] || 'low',
       },
       geometry: {
         type: 'Point' as const,
@@ -409,15 +412,13 @@ const ensureSimulationLayers = (map: mapboxgl.Map) => {
           13,
         ],
         'circle-color': [
-          'interpolate',
-          ['linear'],
-          ['get', 'intensity'],
-          0,
-          '#facc15',
-          0.5,
-          '#fb923c',
-          1,
-          '#ef4444',
+          'match',
+          ['get', 'risk'],
+          'low', '#22c55e',
+          'moderate', '#facc15',
+          'high', '#f97316',
+          'extreme', '#ef4444',
+          '#94a3b8'
         ],
         'circle-stroke-width': 1.25,
         'circle-stroke-color': 'rgba(255,255,255,0.72)',
@@ -803,16 +804,13 @@ export const MapboxContainer = ({
       ) as any
     );
 
-    const pgv =
-      simulationOutput?.pgv && simulationOutput.pgv.length > 0
-        ? simulationOutput.pgv
-        : simulationOutput?.waveform?.map((receiverWave) =>
-            receiverWave.reduce((max, value) => Math.max(max, Math.abs(value)), 0)
-          ) ?? [];
+    const pgv = simulationOutput?.pgv ?? [];
+    const riskClasses = simulationOutput?.risk_classes ?? [];
 
     hotspotSource?.setData(
-      buildHotspotData(epicenter, pgv, waveProgress) as any
+      buildHotspotData(epicenter, pgv, riskClasses, waveProgress) as any
     );
+
 
     map.current.setPaintProperty(
       WAVE_IDS.pFill,
@@ -882,6 +880,11 @@ export const MapboxContainer = ({
       {selectedUnitType && (
         <div className="pointer-events-none absolute right-6 top-28 z-20 border border-red-500/40 bg-black/80 px-4 py-3 text-xs uppercase tracking-[0.22em] text-red-200 backdrop-blur-md">
           Awaiting Deployment: {selectedUnitType}
+        </div>
+      )}
+      {simulationOutput?.confidence && (
+        <div className="absolute top-4 left-4 bg-black/70 px-3 py-2 text-xs border border-white/20">
+          Confidence: {simulationOutput.confidence}
         </div>
       )}
     </div>

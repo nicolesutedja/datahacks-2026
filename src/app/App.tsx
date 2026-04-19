@@ -121,41 +121,25 @@ useEffect(() => {
             throw new Error(`Backend response not OK: ${response.status}`);
           }
 
+          // ONLY showing key part you replace inside handleMapClick
+
           const data = await response.json();
-          console.log('Seismic backend response:', data);
+          console.log("ML RESPONSE:", data);
 
-          const waveformCandidate =
-            isValidWaveform(data.waveform)
-              ? data.waveform
-              : isValidWaveform(data.wave)
-                ? data.wave
-                : null;
-
-          if (!waveformCandidate) {
-            console.error('Invalid ML waveform payload:', data);
+          if (!data.waveform || data.waveform.length === 0) {
+            console.error("BAD ML RESPONSE");
             setMlData(null);
             return;
           }
 
-          const waveform = waveformCandidate;
-
-          const maxAmplitude =
-            typeof data.max_amplitude === 'number' && Number.isFinite(data.max_amplitude)
-              ? data.max_amplitude
-              : computeMaxAmplitude(waveform);
-
-          const pgv =
-            Array.isArray(data.pgv) &&
-            data.pgv.length > 0 &&
-            data.pgv.every((value: unknown) => typeof value === 'number' && Number.isFinite(value))
-              ? data.pgv
-              : computePgv(waveform);
-
           setMlData({
-            waveform,
-            max_amplitude: maxAmplitude,
-            pgv,
+            waveform: data.waveform,
+            max_amplitude: data.max_amplitude ?? 0.02,
+            pgv: data.adjusted_pgv ?? data.pgv,
+            risk_classes: data.risk_classes,
+            confidence: data.confidence
           });
+ 
         } catch (error) {
           console.error('Failed to fetch ML data:', error);
           setMlData(null);
