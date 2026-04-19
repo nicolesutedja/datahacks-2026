@@ -1,5 +1,5 @@
 import { motion } from 'motion/react';
-import { BarChart3, Users, Gauge, Target, RotateCcw, TrendingUp, Award } from 'lucide-react';
+import { BarChart3, Users, Gauge, Target, RotateCcw, TrendingUp, Award, Terminal } from 'lucide-react';
 
 interface Results {
   livesSaved: number;
@@ -17,11 +17,12 @@ interface ResultsScreenProps {
 export const ResultsScreen = ({ results, onReset }: ResultsScreenProps) => {
   const getGrade = () => {
     const avgScore = (results.resourceEfficiency + results.predictionAccuracy) / 2;
-    if (avgScore >= 90) return { letter: 'S', color: 'text-blue-600', bg: 'bg-blue-50', desc: 'Exceptional' };
-    if (avgScore >= 80) return { letter: 'A', color: 'text-green-600', bg: 'bg-green-50', desc: 'Excellent' };
-    if (avgScore >= 70) return { letter: 'B', color: 'text-indigo-600', bg: 'bg-indigo-50', desc: 'Good' };
-    if (avgScore >= 60) return { letter: 'C', color: 'text-yellow-600', bg: 'bg-yellow-50', desc: 'Fair' };
-    return { letter: 'D', color: 'text-red-600', bg: 'bg-red-50', desc: 'Needs Improvement' };
+    // Tactical Grade Colors: S is glowing white, A is bright red, lower grades fade out
+    if (avgScore >= 90) return { letter: 'S', color: 'text-white shadow-white', border: 'border-white', bg: 'bg-white/10', desc: 'MISSION EXCEEDED' };
+    if (avgScore >= 80) return { letter: 'A', color: 'text-red-400', border: 'border-red-400', bg: 'bg-red-400/10', desc: 'OUTSTANDING' };
+    if (avgScore >= 70) return { letter: 'B', color: 'text-amber-500', border: 'border-amber-500', bg: 'bg-amber-500/10', desc: 'ACCEPTABLE' };
+    if (avgScore >= 60) return { letter: 'C', color: 'text-orange-600', border: 'border-orange-600', bg: 'bg-orange-600/10', desc: 'SUBOPTIMAL' };
+    return { letter: 'D', color: 'text-red-800', border: 'border-red-900', bg: 'bg-red-950/30', desc: 'CRITICAL FAILURE' };
   };
 
   const grade = getGrade();
@@ -30,34 +31,39 @@ export const ResultsScreen = ({ results, onReset }: ResultsScreenProps) => {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 font-mono"
     >
       <motion.div
-        initial={{ scale: 0.9, y: 20 }}
+        initial={{ scale: 0.95, y: 10 }}
         animate={{ scale: 1, y: 0 }}
         transition={{ type: 'spring', damping: 25 }}
-        className="w-full max-w-4xl bg-white rounded-xl shadow-2xl overflow-hidden"
+        className="relative w-full max-w-4xl bg-black border border-red-900/50 shadow-[0_0_50px_rgba(220,38,38,0.15)] overflow-hidden"
       >
+        {/* IMMERSION: CRT Scanline Overlay inside the modal */}
+        <div className="pointer-events-none absolute inset-0 z-50 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_4px,3px_100%] opacity-20 mix-blend-overlay" />
+
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-6">
+        <div className="bg-red-950/30 border-b border-red-900/50 p-6 relative z-10">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
-                <BarChart3 className="w-6 h-6 text-white" />
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-black border border-red-500/50 flex items-center justify-center shadow-[0_0_15px_rgba(220,38,38,0.3)]">
+                <BarChart3 className="w-6 h-6 text-red-500" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-white">Simulation Complete</h2>
-                <p className="text-sm text-blue-100">Performance Analysis</p>
+                <h2 className="text-2xl font-bold text-red-500 tracking-[0.2em] uppercase">Simulation Complete</h2>
+                <p className="text-[10px] text-red-500/50 tracking-widest uppercase mt-1">Post-Action Performance Analysis</p>
               </div>
             </div>
+            
+            {/* Tactical Grade Badge */}
             <div className="text-right">
-              <div className={`inline-flex items-center gap-2 px-4 py-2 ${grade.bg} rounded-lg`}>
-                <Award className={`w-5 h-5 ${grade.color}`} />
-                <div>
-                  <div className={`text-3xl font-bold ${grade.color}`}>
+              <div className={`inline-flex items-center gap-4 px-6 py-2 border ${grade.border} ${grade.bg} shadow-[0_0_20px_rgba(0,0,0,0.5)]`}>
+                <Award className={`w-6 h-6 ${grade.color}`} />
+                <div className="flex flex-col items-end">
+                  <div className={`text-3xl font-black ${grade.color} drop-shadow-[0_0_10px_currentColor]`}>
                     {grade.letter}
                   </div>
-                  <p className={`text-xs ${grade.color}`}>{grade.desc}</p>
+                  <p className={`text-[9px] tracking-[0.2em] uppercase ${grade.color}`}>{grade.desc}</p>
                 </div>
               </div>
             </div>
@@ -65,54 +71,57 @@ export const ResultsScreen = ({ results, onReset }: ResultsScreenProps) => {
         </div>
 
         {/* Stats Grid */}
-        <div className="p-6">
+        <div className="p-6 relative z-10">
           <div className="grid grid-cols-2 gap-4 mb-6">
+            
             {/* Lives Saved */}
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.1 }}
-              className="p-6 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl border border-green-200"
+              className="p-5 bg-black border border-red-900/50 hover:border-red-500/50 transition-colors relative group"
             >
+              <div className="absolute top-0 left-0 w-1 h-full bg-red-600 hidden group-hover:block shadow-[0_0_10px_rgba(220,38,38,1)]" />
               <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                  <Users className="w-6 h-6 text-green-600" />
+                <div className="w-10 h-10 bg-red-950/30 border border-red-900/50 flex items-center justify-center">
+                  <Users className="w-5 h-5 text-red-500" />
                 </div>
-                <span className="text-xs font-medium text-green-700 px-2 py-1 bg-green-100 rounded-full">
+                <span className="text-[9px] font-bold text-red-500 px-2 py-1 border border-red-900/50 bg-red-950/20 tracking-widest uppercase">
                   Primary Metric
                 </span>
               </div>
-              <p className="text-sm text-slate-600 mb-2">Lives Saved</p>
-              <p className="text-3xl font-bold text-green-600">
+              <p className="text-[10px] text-red-500/50 uppercase tracking-widest mb-1">Lives Saved</p>
+              <p className="text-3xl font-black text-red-500 tracking-wider">
                 {results.livesSaved.toLocaleString()}
               </p>
-              <p className="text-xs text-slate-500 mt-2">
+              <p className="text-[9px] text-red-500/40 mt-2 uppercase tracking-widest">
                 Estimated civilian protection rate
               </p>
             </motion.div>
 
             {/* Resource Efficiency */}
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.2 }}
-              className="p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200"
+              className="p-5 bg-black border border-red-900/50 hover:border-red-500/50 transition-colors relative group"
             >
+              <div className="absolute top-0 left-0 w-1 h-full bg-red-600 hidden group-hover:block shadow-[0_0_10px_rgba(220,38,38,1)]" />
               <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <Gauge className="w-6 h-6 text-blue-600" />
+                <div className="w-10 h-10 bg-red-950/30 border border-red-900/50 flex items-center justify-center">
+                  <Gauge className="w-5 h-5 text-red-500" />
                 </div>
               </div>
-              <p className="text-sm text-slate-600 mb-2">Resource Efficiency</p>
-              <p className="text-3xl font-bold text-blue-600">
+              <p className="text-[10px] text-red-500/50 uppercase tracking-widest mb-1">Asset Efficiency</p>
+              <p className="text-3xl font-black text-red-400 tracking-wider">
                 {results.resourceEfficiency}%
               </p>
-              <div className="mt-3 w-full bg-slate-200 rounded-full h-2">
+              <div className="mt-4 w-full bg-red-950 h-1.5 border border-red-900/30 overflow-hidden">
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${results.resourceEfficiency}%` }}
                   transition={{ delay: 0.5, duration: 1 }}
-                  className="bg-blue-500 h-2 rounded-full"
+                  className="bg-red-500 h-full shadow-[0_0_10px_rgba(220,38,38,1)]"
                 />
               </div>
             </motion.div>
@@ -122,23 +131,24 @@ export const ResultsScreen = ({ results, onReset }: ResultsScreenProps) => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
-              className="p-6 bg-gradient-to-br from-purple-50 to-violet-50 rounded-xl border border-purple-200"
+              className="p-5 bg-black border border-red-900/50 hover:border-red-500/50 transition-colors relative group"
             >
+              <div className="absolute top-0 left-0 w-1 h-full bg-red-600 hidden group-hover:block shadow-[0_0_10px_rgba(220,38,38,1)]" />
               <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                  <Target className="w-6 h-6 text-purple-600" />
+                <div className="w-10 h-10 bg-red-950/30 border border-red-900/50 flex items-center justify-center">
+                  <Target className="w-5 h-5 text-red-500" />
                 </div>
               </div>
-              <p className="text-sm text-slate-600 mb-2">Prediction Accuracy</p>
-              <p className="text-3xl font-bold text-purple-600">
+              <p className="text-[10px] text-red-500/50 uppercase tracking-widest mb-1">ML Surrogate Accuracy</p>
+              <p className="text-3xl font-black text-red-400 tracking-wider">
                 {results.predictionAccuracy}%
               </p>
-              <div className="mt-3 w-full bg-slate-200 rounded-full h-2">
+              <div className="mt-4 w-full bg-red-950 h-1.5 border border-red-900/30 overflow-hidden">
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${results.predictionAccuracy}%` }}
                   transition={{ delay: 0.6, duration: 1 }}
-                  className="bg-purple-500 h-2 rounded-full"
+                  className="bg-red-500 h-full shadow-[0_0_10px_rgba(220,38,38,1)]"
                 />
               </div>
             </motion.div>
@@ -148,63 +158,67 @@ export const ResultsScreen = ({ results, onReset }: ResultsScreenProps) => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 }}
-              className="p-6 bg-gradient-to-br from-slate-50 to-gray-50 rounded-xl border border-slate-200"
+              className="p-5 bg-black border border-red-900/50 hover:border-red-500/50 transition-colors relative group"
             >
+              <div className="absolute top-0 left-0 w-1 h-full bg-red-600 hidden group-hover:block shadow-[0_0_10px_rgba(220,38,38,1)]" />
               <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center">
-                  <TrendingUp className="w-6 h-6 text-slate-600" />
+                <div className="w-10 h-10 bg-red-950/30 border border-red-900/50 flex items-center justify-center">
+                  <TrendingUp className="w-5 h-5 text-red-500" />
                 </div>
               </div>
-              <p className="text-sm text-slate-600 mb-2">Event Summary</p>
-              <p className="text-xl font-bold text-slate-900">
-                M{results.magnitude.toFixed(1)} Earthquake
+              <p className="text-[10px] text-red-500/50 uppercase tracking-widest mb-1">Event Summary</p>
+              <p className="text-xl font-bold text-red-500 uppercase tracking-wider">
+                Magnitude {results.magnitude.toFixed(1)}
               </p>
-              <p className="text-sm text-slate-600 mt-2">
-                {results.unitsDeployed} response units deployed
+              <p className="text-[10px] text-red-500/50 mt-2 uppercase tracking-widest">
+                {results.unitsDeployed} Response assets deployed
               </p>
             </motion.div>
           </div>
 
-          {/* AI Insights */}
+          {/* AI Insights Terminal */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.7 }}
-            className="p-5 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100 mb-6"
+            className="p-5 bg-black border border-red-900/50 mb-6 relative"
           >
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
-              <span className="text-sm font-semibold text-slate-900">AI-Powered Insights</span>
+            <div className="flex items-center gap-3 mb-4 border-b border-red-900/30 pb-3">
+              <Terminal className="w-4 h-4 text-red-500" />
+              <span className="text-xs font-bold text-red-500 tracking-[0.2em] uppercase">Gemini AI Insights</span>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="flex items-start gap-2">
-                <div className="w-1 h-1 bg-green-500 rounded-full mt-1.5" />
-                <p className="text-sm text-slate-700">
+            
+            <div className="grid grid-cols-2 gap-x-8 gap-y-3">
+              <div className="flex items-start gap-3">
+                <span className="text-red-500 mt-0.5">{'>'}</span>
+                <p className="text-[10px] text-red-400/80 uppercase tracking-wider leading-relaxed">
                   Response time optimal for urban deployment
                 </p>
               </div>
-              <div className="flex items-start gap-2">
-                <div className="w-1 h-1 bg-yellow-500 rounded-full mt-1.5" />
-                <p className="text-sm text-slate-700">
+              <div className="flex items-start gap-3">
+                <span className="text-red-500 mt-0.5">{'>'}</span>
+                <p className="text-[10px] text-red-400/80 uppercase tracking-wider leading-relaxed">
                   Consider additional medical resources for M7.0+
                 </p>
               </div>
-              <div className="flex items-start gap-2">
-                <div className="w-1 h-1 bg-blue-500 rounded-full mt-1.5" />
-                <p className="text-sm text-slate-700">
-                  Wave propagation model accuracy: {results.predictionAccuracy}%
+              <div className="flex items-start gap-3">
+                <span className="text-red-500 mt-0.5">{'>'}</span>
+                <p className="text-[10px] text-red-400/80 uppercase tracking-wider leading-relaxed">
+                  Wave propagation model matched reality by {results.predictionAccuracy}%
                 </p>
               </div>
-              <div className="flex items-start gap-2">
-                <div className="w-1 h-1 bg-purple-500 rounded-full mt-1.5" />
-                <p className="text-sm text-slate-700">
-                  Unit distribution effective across impact zone
+              <div className="flex items-start gap-3">
+                <span className="text-red-500 mt-0.5">{'>'}</span>
+                <p className="text-[10px] text-red-400/80 uppercase tracking-wider leading-relaxed">
+                  Asset distribution effective across impact zone
                 </p>
               </div>
             </div>
-            <div className="mt-3 pt-3 border-t border-blue-200">
-              <p className="text-xs text-slate-500 italic">
-                Integration point for Gemini ML analysis
+            
+            <div className="mt-4 pt-3 border-t border-red-900/30 flex items-center gap-2">
+              <div className="w-2 h-2 bg-red-600 rounded-full animate-pulse shadow-[0_0_8px_rgba(220,38,38,0.8)]" />
+              <p className="text-[9px] text-red-500/40 uppercase tracking-widest">
+                Data logged to master terminal
               </p>
             </div>
           </motion.div>
@@ -212,11 +226,11 @@ export const ResultsScreen = ({ results, onReset }: ResultsScreenProps) => {
           {/* Action Button */}
           <button
             onClick={onReset}
-            className="w-full flex items-center justify-center gap-2 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700
-                     text-white rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all"
+            className="w-full flex items-center justify-center gap-3 py-4 bg-red-600/10 hover:bg-red-600/20 border border-red-600 text-red-500
+                     font-bold tracking-widest text-xs uppercase transition-all shadow-[0_0_15px_rgba(220,38,38,0.2)] hover:shadow-[0_0_25px_rgba(220,38,38,0.4)]"
           >
-            <RotateCcw className="w-5 h-5" />
-            Start New Simulation
+            <RotateCcw className="w-4 h-4" />
+            Acknowledge & Return to Menu
           </button>
         </div>
       </motion.div>
