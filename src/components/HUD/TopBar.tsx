@@ -8,9 +8,10 @@ interface TopBarProps {
   gameState: string;
   countdown: number | null;
   magnitude: number;
+  onReturnToMenu?: () => void;
 }
 
-export const TopBar = ({ gameState, countdown, magnitude }: TopBarProps) => {
+export const TopBar = ({ gameState, countdown, magnitude, onReturnToMenu }: TopBarProps) => {
   const [currentTime, setCurrentTime] = useState('');
 
   useEffect(() => {
@@ -128,9 +129,22 @@ export const TopBar = ({ gameState, countdown, magnitude }: TopBarProps) => {
               />
             </div>
             <div>
-              <h1 className="text-lg font-bold tracking-[0.2em] text-red-500" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+              <motion.h1
+                className="text-lg font-bold tracking-[0.2em] text-red-500 cursor-pointer transition-all"
+                style={{ fontFamily: 'Orbitron, sans-serif' }}
+                whileHover={{
+                  textShadow: [
+                    "0 0 10px rgba(239,68,68,0.5)",
+                    "0 0 20px rgba(239,68,68,0.8)",
+                    "0 0 10px rgba(239,68,68,0.5)"
+                  ],
+                  scale: 1.02,
+                }}
+                transition={{ duration: 0.4 }}
+                onClick={onReturnToMenu}
+              >
                 SEISMIC SIMULATOR
-              </h1>
+              </motion.h1>
               <p className="text-[10px] text-red-500/50 tracking-widest uppercase">Tactical Response v3.7</p>
             </div>
           </div>

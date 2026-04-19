@@ -238,6 +238,7 @@ useEffect(() => {
         gameState={gameState}
         countdown={countdown}
         magnitude={magnitude}
+        onReturnToMenu={handleReturnToMenu}
       />
 
       <Sidebar
