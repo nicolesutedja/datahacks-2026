@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface MissionBriefingModalProps {
@@ -9,45 +9,99 @@ interface MissionBriefingModalProps {
 const STEPS = [
   {
     id: '01',
-    title: 'Epicenter inbound',
-    body: 'A seismic rupture has been detected at a randomized hypocenter somewhere in Southern California. The map will lock onto the epicenter automatically — that is your ground zero. Magnitude is unknown until arrival.',
+    title: 'EARTHQUAKE DETECTED',
+    body: 'Seismic activity has been found. Magnitude has been determined. Ground zero is Southern California. Brace for arrival.',
   },
   {
     id: '02',
-    title: 'Identify vulnerable sectors',
-    body: 'Red zones mark soils with low shear-wave velocity and high liquefaction potential — saturated, cohesionless sediments prone to cyclic pore-pressure failure. Hover them to pull sector intel. These are your priority targets.',
+    title: 'SECTOR VULNERABILITY',
+    body: 'Red zones indicate liquefaction failure. These are areas most vulnerable to earthquakes. Use your scanner to identify your priority targets now.',
   },
   {
     id: '03',
-    title: 'Deploy your $10M mitigation budget',
-    body: 'Three tools available. Vertical drainage networks dissipate excess pore pressure in saturated sediments. Vibro-stone column rigs densify loose granular soils and reduce lateral spreading. Cement deep-soil mixing binds particles into a rigid composite mass. Choose wisely — budget is finite.',
+    title: 'DEFENSE PROTOCOL',
+    body: 'A budget depending on scale has been authorized. Stabilize any priority areas before the wave hits. Time is a luxury we don’t have.',
   },
   {
     id: '04',
-    title: 'Post-event assessment',
-    body: 'Once the wave clears, you receive a full damage report: sector survival rates, civilian impact count, and a performance grade. The map stays live — pan the aftermath and see exactly what held and what failed.',
+    title: 'IMPACT EVALUATION',
+    body: 'Post-event data will confirm survival rates. Analysis is final. See what held, and what we lost. Good luck, Captain.',
   },
 ];
 
 export const MissionBriefingModal = ({ onConfirm, onClose }: MissionBriefingModalProps) => {
   const [revealedCount, setRevealedCount] = useState(1);
   const [closing, setClosing] = useState(false);
+  
+  // Using a ref to track the actual Audio object for immediate stopping
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const isLastStep = revealedCount === STEPS.length;
-
-  const handleNext = () => {
-    if (!isLastStep) setRevealedCount(c => c + 1);
+  // Helper to kill audio instantly
+  const killAudio = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.src = ""; // Clears the stream buffer
+      audioRef.current = null;
+    }
   };
 
+  const speak = async (text: string) => {
+    killAudio(); // Stop current speech before starting new one
+    
+    const VOICE_ID = 'gVh6lddROTbOaOz9AAnY';
+
+    try {
+      const response = await fetch(
+        `https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'xi-api-key': import.meta.env.VITE_ELEVENLABS_API_KEY,
+          },
+          body: JSON.stringify({
+            text,
+            model_id: 'eleven_turbo_v2_5', // Faster response for better UI feel
+            voice_settings: { stability: 0.4, similarity_boost: 0.8 },
+          }),
+        }
+      );
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      audioRef.current = audio;
+      audio.play();
+    } catch (err) {
+      console.error('Comms failure:', err);
+    }
+  };
+
+  useEffect(() => {
+    if (!closing) {
+      const currentStep = STEPS[revealedCount - 1];
+      speak(`${currentStep.title}. ${currentStep.body}`);
+    }
+    return () => killAudio(); // Cleanup on unmount
+  }, [revealedCount]);
+
   const handleConfirm = () => {
+    killAudio(); // SILENCE IMMEDIATELY
     setClosing(true);
     setTimeout(onConfirm, 350);
   };
 
   const handleClose = () => {
+    killAudio(); // SILENCE IMMEDIATELY
     setClosing(true);
     setTimeout(onClose, 350);
   };
+
+  const handleNext = () => {
+    if (revealedCount < STEPS.length) setRevealedCount(c => c + 1);
+  };
+
+  const isLastStep = revealedCount === STEPS.length;
 
   return (
     <AnimatePresence>
